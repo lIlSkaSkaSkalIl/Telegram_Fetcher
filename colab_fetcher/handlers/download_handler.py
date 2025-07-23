@@ -1,9 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from colab_fetcher.utils.user_state import set_user_state
-from colab_fetcher.bot.logger import get_logger
-
-logger = get_logger("DownloadHandler")
+from colab_fetcher.bot.logger import logger
 
 @Client.on_message(filters.command("download"))
 async def download_command(client: Client, message: Message):
