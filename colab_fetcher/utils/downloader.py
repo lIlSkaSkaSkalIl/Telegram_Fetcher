@@ -9,7 +9,7 @@ from pyrogram.enums import ParseMode
 async def download_with_progress(client, message: Message, file_path: str):
     """Download file dengan progress bar custom"""
     start_time = time.time()
-    filename = getattr(message.document, "file_name", "Unknown")
+    filename = os.path.basename(file_path)
     media_type = message.media.value.capitalize()
     progress_msg = None
     
