@@ -1,5 +1,6 @@
 import os
 from pyrogram import filters
+from humanize import naturalsize
 from pyrogram.types import Message
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.logger import logger
