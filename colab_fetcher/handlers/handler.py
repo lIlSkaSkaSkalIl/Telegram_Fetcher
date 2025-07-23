@@ -1,8 +1,8 @@
 import os
 from pyrogram import filters
 from pyrogram.types import Message
-from colab_fetcher.bot.client import app
-from colab_fetcher.bot.logger import logger
+from colab_fetcher.utils.client import app
+from colab_fetcher.utils.logger import logger
 from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
 
 @app.on_message(filters.command("start") & filters.private)
