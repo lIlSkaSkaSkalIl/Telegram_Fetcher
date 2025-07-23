@@ -10,6 +10,7 @@ from colab_fetcher.utils.helper import get_unique_filename
 from colab_fetcher.utils.downloader import download_with_progress
 from colab_fetcher.utils.file_validator import is_allowed_file
 from colab_fetcher.utils.helper import send_error
+from colab_fetcher.utils.downloader import active_downloads
 
 
 @app.on_message(filters.command("start") & filters.private)
@@ -55,3 +56,15 @@ async def handle_file_upload(client, message: Message):
         logger.error(f"Download error: {e}")
     finally:
         clear_user_state(message.from_user.id)
+
+
+@app.on_callback_query(filters.regex(r"cancel_dl_(\d+)"))
+async def handle_cancel_download(client, callback_query):
+    message_id = int(callback_query.data.split("_")[-1])
+    
+    if message_id in active_downloads:
+        active_downloads[message_id] = True  # Set flag cancel
+        await callback_query.answer("Download akan dibatalkan...")
+    else:
+        await callback_query.answer("Tidak ada download aktif", show_alert=True)
+
