@@ -34,6 +34,7 @@ async def download_command(client, message: Message):
     except Exception as e:
         logger.error(f"Error in /download handler: {e}")
 
+
 @app.on_message(filters.document | filters.video | filters.audio | filters.photo)
 async def handle_file_upload(client, message: Message):
     state = get_user_state(message.from_user.id)
@@ -44,25 +45,36 @@ async def handle_file_upload(client, message: Message):
                 await send_error(message, "invalid_type")
                 return
 
-            # Setup directory
+            # Setup directory dan nama file
             output_dir = "/content/downloads"
-            os.makedirs(output_dir, exist_ok=True)
             
-            # Generate unique filename
-            filename = message.document.file_name if message.document else None
-            caption = message.caption
-            unique_name = get_unique_filename(output_dir, filename, caption)
+            # Dapatkan filename atau gunakan media type sebagai fallback
+            filename = None
+            if message.document:
+                filename = message.document.file_name
+            elif message.media:
+                filename = f"{message.media.value}_{message.id}"
+                
+            # Generate nama file unik
+            unique_name = get_unique_filename(
+                directory=output_dir,
+                filename=filename,
+                caption=message.caption
+            )
             file_path = os.path.join(output_dir, unique_name)
             
             # Download dengan progress
             downloaded_path = await download_with_progress(client, message, file_path)
             clear_user_state(message.from_user.id)
             
+            # Konfirmasi sukses
             if downloaded_path and os.path.exists(downloaded_path):
+                file_type = get_file_type(downloaded_path)
                 await message.reply_text(
-                    f"✅ <b>Download Complete!</b>\n\n"
-                    f"📁 <b>Path:</b> <code>{downloaded_path}</code>\n"
-                    f"📦 <b>Size:</b> {naturalsize(os.path.getsize(downloaded_path))}",
+                    f"✅ <b>{file_type.capitalize()} Downloaded!</b>\n\n"
+                    f"📂 <b>Name:</b> <code>{os.path.basename(downloaded_path)}</code>\n"
+                    f"📦 <b>Size:</b> {naturalsize(os.path.getsize(downloaded_path))}\n"
+                    f"📍 <b>Path:</b> <code>{downloaded_path}</code>",
                     parse_mode=ParseMode.HTML
                 )
             else:
@@ -71,7 +83,5 @@ async def handle_file_upload(client, message: Message):
         except Exception as e:
             logger.error(f"Download error: {e}")
             await send_error(message, "processing_error")
-            raise
         finally:
             clear_user_state(message.from_user.id)
-
