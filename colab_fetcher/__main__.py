@@ -1,7 +1,7 @@
 from pyrogram import Client
-from utility.bot_handler import setup_handlers
-from utility.config_manager import ConfigManager
-from utility.helper import setup_logging
+from .utility.bot_handler import setup_handlers
+from .utility.config_manager import ConfigManager
+from .utility.helper import setup_logging
 
 def main():
     logger = setup_logging()
