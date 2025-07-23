@@ -62,12 +62,12 @@ async def handle_file_upload(client, message: Message):
 
 
 @app.on_callback_query(filters.regex(r"cancel_dl_(\d+)"))
-async def handle_cancel_download(client, callback_query):
+async def handle_cancel(client, callback_query):
     message_id = int(callback_query.data.split("_")[-1])
     
     if message_id in active_downloads:
-        active_downloads[message_id] = True  # Set flag cancel
-        await callback_query.answer("Download akan dibatalkan...")
+        active_downloads[message_id] = True
+        await callback_query.answer("Cancelling download...")
     else:
-        await callback_query.answer("Tidak ada download aktif", show_alert=True)
+        await callback_query.answer("No active download to cancel", show_alert=True)
 
