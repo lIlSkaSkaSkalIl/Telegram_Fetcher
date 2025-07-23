@@ -6,6 +6,8 @@ from colab_fetcher.utils.logger import logger
 from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
 from colab_fetcher.utils.helper import get_unique_filename
 from colab_fetcher.utils.downloader import download_with_progress
+from colab_fetcher.utils.file_validator import is_allowed_file
+from colab_fetcher.utils.helper import send_error
 
 
 @app.on_message(filters.command("start") & filters.private)
