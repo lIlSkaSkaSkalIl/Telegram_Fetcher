@@ -5,7 +5,7 @@ from colab_fetcher.bot.client import app
 import os
 
 @app.on_message(filters.document | filters.video | filters.audio | filters.photo)
-async def handle_file_upload(client: Client, message: Message):
+async def handle_file_upload(client, message: Message):
     state = get_user_state(message.from_user.id)
     if state == "waiting_for_file":
         await message.reply_text("Downloading file...")
