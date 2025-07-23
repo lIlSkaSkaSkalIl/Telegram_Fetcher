@@ -4,6 +4,7 @@ from pyrogram.types import Message
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.logger import logger
 from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
+from colab_fetcher.utils.helper import get_unique_filename
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message: Message):
@@ -32,7 +33,15 @@ async def handle_file_upload(client, message: Message):
     state = get_user_state(message.from_user.id)
     if state == "waiting_for_file":
         await message.reply_text("Downloading file...")
-        file_path = await message.download(file_name=message.file_name or None)
+
+        output_dir = "/content/downloads"
+        os.makedirs(output_dir, exist_ok=True)
+
+        filename = message.document.file_name if message.document else None
+        caption = message.caption
+
+        unique_name = get_unique_filename(output_dir, filename, caption)
+        file_path = await message.download(file_name=os.path.join(output_dir, unique_name))
         clear_user_state(message.from_user.id)
 
         if file_path and os.path.exists(file_path):
