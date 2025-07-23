@@ -57,9 +57,8 @@ async def handle_file_upload(client, message: Message):
                 
             # Generate nama file unik
             unique_name = get_unique_filename(
-                directory=output_dir,
-                filename=filename,
-                caption=message.caption
+                directory="/content/downloads",
+                message=message  # Kirim seluruh object message
             )
             file_path = os.path.join(output_dir, unique_name)
             
