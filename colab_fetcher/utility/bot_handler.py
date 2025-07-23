@@ -1,6 +1,6 @@
 from pyrogram import filters
 from pyrogram.types import Message
-from utility.helper import setup_logging
+from .helper import setup_logging
 
 logger = setup_logging()  # Inisialisasi logger
 
