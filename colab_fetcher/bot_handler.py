@@ -1,8 +1,8 @@
-import logging
 from pyrogram import filters
 from pyrogram.types import Message
+from utility.helper import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 def setup_handlers(app):
     @app.on_message(filters.all)
