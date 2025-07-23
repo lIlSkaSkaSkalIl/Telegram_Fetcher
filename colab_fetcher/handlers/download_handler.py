@@ -5,7 +5,7 @@ from colab_fetcher.bot.logger import logger
 from colab_fetcher.bot.client import app
 
 @app.on_message(filters.command("download"))
-async def download_command(client: Client, message: Message):
+async def download_command(client, message: Message):
     try:
         logger.info(f"Received /download command from user {message.from_user.id}")
         await message.reply_text("Please send the file you want to download.")
