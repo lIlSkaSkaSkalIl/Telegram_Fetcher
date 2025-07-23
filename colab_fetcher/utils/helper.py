@@ -8,46 +8,49 @@ def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove unsupported characters."""
     return "".join(c for c in name if c.isalnum() or c in (' ', '.', '_')).rstrip()
 
-def get_file_extension(msg: Message) -> str:
+def get_file_extension(message: Message) -> str:
     """Mendapatkan ekstensi file dari message"""
-    if msg.document:
-        ext = os.path.splitext(msg.document.file_name or "")[1]
-    elif msg.video:
-        ext = os.path.splitext(msg.video.file_name or "")[1] or ".mp4"
-    elif msg.audio:
-        ext = os.path.splitext(msg.audio.file_name or "")[1] or ".mp3"
-    elif msg.photo:
+    if message.document:
+        ext = os.path.splitext(message.document.file_name or "")[1]
+    elif message.video:
+        ext = os.path.splitext(message.video.file_name or "")[1] or ".mp4"
+    elif message.audio:
+        ext = os.path.splitext(message.audio.file_name or "")[1] or ".mp3"
+    elif message.photo:
         ext = ".jpg"
-    elif msg.voice:
+    elif message.voice:
         ext = ".ogg"
-    elif msg.sticker:
+    elif message.sticker:
         ext = ".webp"
     else:
         ext = ".bin"
-    
     return ext.lower()
 
 def get_unique_filename(directory: str, message: Message) -> str:
     """
-    Generate unique filename dengan prioritas:
-    1. Filename asli (jika ada)
-    2. Caption (jika ada)
-    3. Timestamp (fallback)
-    Selalu sertakan ekstensi yang sesuai
+    Generate unique filename dengan:
+    1. Filename asli (jika ada) + ekstensi
+    2. Caption (50 char) + ekstensi (jika tidak ada filename)
+    3. Timestamp + ekstensi (fallback)
     """
     os.makedirs(directory, exist_ok=True)
     ext = get_file_extension(message)
     
-    # Case 1: Pakai filename asli
-    if msg.document and msg.document.file_name:
-        base = sanitize_filename(os.path.splitext(msg.document.file_name)[0])
+    # Case 1: Filename asli
+    if (message.document and message.document.file_name) or \
+       (message.video and message.video.file_name) or \
+       (message.audio and message.audio.file_name):
+        filename = message.document.file_name if message.document else \
+                  message.video.file_name if message.video else \
+                  message.audio.file_name
+        base = sanitize_filename(os.path.splitext(filename)[0])
         final_name = f"{base}{ext}"
     
-    # Case 2: Pakai caption
-    elif msg.caption:
-        final_name = f"{sanitize_filename(msg.caption)[:50]}{ext}"
+    # Case 2: Caption
+    elif message.caption:
+        final_name = f"{sanitize_filename(message.caption)[:50]}{ext}"
     
-    # Case 3: Pakai timestamp
+    # Case 3: Timestamp
     else:
         final_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
     
