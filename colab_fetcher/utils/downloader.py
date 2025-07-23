@@ -33,8 +33,8 @@ async def download_with_progress(client, message: Message, file_path: str):
             
             # Format progress
             percent = current / total * 100
-            filled_length = int(30 * current // total)
-            bar = "█" * filled_length + "░" * (30 - filled_length)
+            filled_length = int(14 * current // total)
+            bar = "█" * filled_length + "░" * (14 - filled_length)
             
             progress_text = (
                 f"<b>Downloading...\n\n</b>"
