@@ -1,9 +1,9 @@
 import json
 import os
-import logging
 from pathlib import Path
+from utility.helper import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 class ConfigManager:
     def __init__(self):
