@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from utility.helper import setup_logging
+from .helper import setup_logging
 
 logger = setup_logging()
 
