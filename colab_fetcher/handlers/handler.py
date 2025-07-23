@@ -5,6 +5,8 @@ from colab_fetcher.utils.client import app
 from colab_fetcher.utils.logger import logger
 from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
 from colab_fetcher.utils.helper import get_unique_filename
+from colab_fetcher.utils.downloader import download_with_progress
+
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message: Message):
@@ -32,19 +34,40 @@ async def download_command(client, message: Message):
 async def handle_file_upload(client, message: Message):
     state = get_user_state(message.from_user.id)
     if state == "waiting_for_file":
-        await message.reply_text("Downloading file...")
+        try:
+            # Validasi file
+            if not is_allowed_file(message):
+                await send_error(message, "invalid_type")
+                return
 
-        output_dir = "/content/downloads"
-        os.makedirs(output_dir, exist_ok=True)
+            # Setup directory
+            output_dir = "/content/downloads"
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Generate unique filename
+            filename = message.document.file_name if message.document else None
+            caption = message.caption
+            unique_name = get_unique_filename(output_dir, filename, caption)
+            file_path = os.path.join(output_dir, unique_name)
+            
+            # Download dengan progress
+            downloaded_path = await download_with_progress(client, message, file_path)
+            clear_user_state(message.from_user.id)
+            
+            if downloaded_path and os.path.exists(downloaded_path):
+                await message.reply_text(
+                    f"✅ <b>Download Complete!</b>\n\n"
+                    f"📁 <b>Path:</b> <code>{downloaded_path}</code>\n"
+                    f"📦 <b>Size:</b> {naturalsize(os.path.getsize(downloaded_path))}",
+                    parse_mode=ParseMode.HTML
+                )
+            else:
+                await send_error(message, "download_failed")
+                
+        except Exception as e:
+            logger.error(f"Download error: {e}")
+            await send_error(message, "processing_error")
+            raise
+        finally:
+            clear_user_state(message.from_user.id)
 
-        filename = message.document.file_name if message.document else None
-        caption = message.caption
-
-        unique_name = get_unique_filename(output_dir, filename, caption)
-        file_path = await message.download(file_name=os.path.join(output_dir, unique_name))
-        clear_user_state(message.from_user.id)
-
-        if file_path and os.path.exists(file_path):
-            await message.reply_text(f"✅ File downloaded successfully!\n\n📁 Saved to: `{file_path}`")
-        else:
-            await message.reply_text("❌ Failed to download the file.")
