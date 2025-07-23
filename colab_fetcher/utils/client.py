@@ -1,6 +1,6 @@
 from pyrogram import Client
 from colab_fetcher import load_credentials
-from colab_fetcher.bot.logger import logger
+from colab_fetcher.utils.logger import logger
 
 logger.info("Loading credentials...")
 creds = load_credentials()
