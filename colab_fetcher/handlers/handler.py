@@ -43,6 +43,9 @@ async def handle_file_upload(client, message: Message):
         file_path = os.path.join(output_dir, unique_name)
         
         downloaded_path = await download_with_progress(client, message, file_path)
+
+        if not downloaded_path:
+            return
         
         if downloaded_path:
             await message.reply_text(
