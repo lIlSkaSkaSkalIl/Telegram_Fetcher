@@ -1,9 +1,10 @@
-from pyrogram import Client, filters
+from pyrogram import filters
 from pyrogram.types import Message
 from colab_fetcher.utils.user_state import get_user_state, clear_user_state
+from colab_fetcher.bot.client import app
 import os
 
-@Client.on_message(filters.document | filters.video | filters.audio | filters.photo)
+@app.on_message(filters.document | filters.video | filters.audio | filters.photo)
 async def handle_file_upload(client: Client, message: Message):
     state = get_user_state(message.from_user.id)
     if state == "waiting_for_file":
