@@ -1,7 +1,7 @@
 import os
 import json
 
-CONFIG_PATH = "/content/colab_fetcher/config/credentials.json"
+CONFIG_PATH = "/content/Telegram_Fetcher/colab_fetcher/config/credentials.json"
 
 def load_credentials():
     if not os.path.exists(CONFIG_PATH):
