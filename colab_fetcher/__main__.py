@@ -1,19 +1,10 @@
-import logging
 from pyrogram import Client
 from .bot_handler import setup_handlers
 from .config_manager import ConfigManager
+from utility.helper import setup_logging
 
 def main():
-    # Setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('telegram_bot.log'),
-            logging.StreamHandler()
-        ]
-    )
-    logger = logging.getLogger(__name__)
+    logger = setup_logging()
     
     try:
         # Setup config
