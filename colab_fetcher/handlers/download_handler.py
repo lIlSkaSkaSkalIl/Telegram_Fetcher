@@ -3,7 +3,7 @@ from pyrogram.types import Message
 from colab_fetcher.utils.user_state import set_user_state
 from colab_fetcher.bot.logger import logger
 
-@Client.on_message(filters.command("download"))
+@app.on_message(filters.command("download"))
 async def download_command(client: Client, message: Message):
     try:
         logger.info(f"Received /download command from user {message.from_user.id}")
