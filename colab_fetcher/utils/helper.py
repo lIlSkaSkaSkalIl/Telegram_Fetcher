@@ -1,5 +1,6 @@
 import os
-import time
+from datetime import datetime 
+from typing import Optional
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 
@@ -7,28 +8,58 @@ def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove unsupported characters."""
     return "".join(c for c in name if c.isalnum() or c in (' ', '.', '_')).rstrip()
 
-def get_unique_filename(directory: str, filename: str = None, caption: str = None) -> str:
-    """Generate a unique filename using filename, caption, or timestamp fallback."""
-    # Prioritization: filename > caption > timestamp
-    if filename:
-        base = os.path.splitext(filename)[0]
-        ext = os.path.splitext(filename)[1] or ""
-    elif caption:
-        base = sanitize_filename(caption)
-        ext = ""
+def get_file_extension(msg: Message) -> str:
+    """Mendapatkan ekstensi file dari message"""
+    if msg.document:
+        ext = os.path.splitext(msg.document.file_name or "")[1]
+    elif msg.video:
+        ext = os.path.splitext(msg.video.file_name or "")[1] or ".mp4"
+    elif msg.audio:
+        ext = os.path.splitext(msg.audio.file_name or "")[1] or ".mp3"
+    elif msg.photo:
+        ext = ".jpg"
+    elif msg.voice:
+        ext = ".ogg"
+    elif msg.sticker:
+        ext = ".webp"
     else:
-        base = str(int(time.time()))
-        ext = ""
+        ext = ".bin"
+    
+    return ext.lower()
 
-    candidate = f"{base}{ext}"
+def get_unique_filename(directory: str, message: Message) -> str:
+    """
+    Generate unique filename dengan prioritas:
+    1. Filename asli (jika ada)
+    2. Caption (jika ada)
+    3. Timestamp (fallback)
+    Selalu sertakan ekstensi yang sesuai
+    """
+    os.makedirs(directory, exist_ok=True)
+    ext = get_file_extension(message)
+    
+    # Case 1: Pakai filename asli
+    if msg.document and msg.document.file_name:
+        base = sanitize_filename(os.path.splitext(msg.document.file_name)[0])
+        final_name = f"{base}{ext}"
+    
+    # Case 2: Pakai caption
+    elif msg.caption:
+        final_name = f"{sanitize_filename(msg.caption)[:50]}{ext}"
+    
+    # Case 3: Pakai timestamp
+    else:
+        final_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
+    
+    # Handle duplikat
     counter = 1
-
-    while os.path.exists(os.path.join(directory, candidate)):
-        candidate = f"{base}_{counter}{ext}"
+    original_name = final_name
+    while os.path.exists(os.path.join(directory, final_name)):
+        name_part, ext_part = os.path.splitext(original_name)
+        final_name = f"{name_part}_{counter}{ext_part}"
         counter += 1
-
-    return candidate
-
+    
+    return final_name
 
 async def send_error(message: Message, error_type: str):
     """Mengirim pesan error yang user-friendly"""
@@ -45,4 +76,3 @@ async def send_error(message: Message, error_type: str):
         error_messages.get(error_type, "Terjadi kesalahan tidak diketahui"),
         parse_mode=ParseMode.HTML
     )
-
