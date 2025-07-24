@@ -26,6 +26,15 @@ def get_file_extension(message: Message) -> str:
         ext = ".bin"
     return ext.lower()
 
+def get_start_message() -> str:
+    return (
+        "👋 Hello! I'm your **Telegram Fetcher** bot.\n\n"
+        "📥 Send me a file, or command and I'll handle it for you.\n"
+        "💾 By default, files will be saved to the **local Colab storage**.\n\n"
+        "☁️ If you want to upload to **Google Drive**, please make sure to *mount* your drive first.\n"
+        "📂 Use the available commands to start uploading."
+    )
+
 def get_unique_filename(directory: str, message: Message) -> str:
     """
     Generate unique filename dengan:
