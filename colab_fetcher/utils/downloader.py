@@ -68,7 +68,7 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
                 f"├📁 <b>Total Size »</b> {naturalsize(total)}\n"
                 f"├⚡ <b>Speed »</b> {naturalsize(speed)}/s\n"
                 f"├⏱️ <b>Elapsed »</b> {format_duration(elapsed)}\n"
-                f"╰⏳ <b>ETA »</b> {format_duration(eta)}\n"
+                f"├⏳ <b>ETA »</b> {format_duration(eta)}\n"
                 f"╰💾 <b>Saved To »</b> {output_dir}"
             )
 
