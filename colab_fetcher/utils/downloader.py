@@ -61,7 +61,8 @@ async def download_with_progress(client, message: Message, file_path: str):
             # Format progress message
             filled = int(14 * percent / 100)
             progress_text = (
-                f"<b>Downloading {filename}</b>\n\n"
+                f"<b>Downloading...</b>\n\n"
+                f"<b>{filename} »\n</b>"
                 f"╭「{'█' * filled}{'░' * (14 - filled)}」 {percent:.1f}%\n"
                 f"├📥 <b>Downloaded »</b> {naturalsize(current)}\n"
                 f"├📁 <b>Total Size »</b> {naturalsize(total)}\n"
