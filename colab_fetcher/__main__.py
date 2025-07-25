@@ -41,10 +41,9 @@ async def handle_file_upload(client, message: Message):
         if not downloaded_path:
             return
 
+        complete_message = download_complete_message(downloaded_path, unique_name) 
         await message.reply_text(
-            f"✅ <b>Download Complete!</b>\n\n"
-            f"📄 <b>File:</b> <code>{unique_name}</code>\n"
-            f"📁 <b>Size:</b> {naturalsize(os.path.getsize(downloaded_path))}",
+            complete_message,
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
