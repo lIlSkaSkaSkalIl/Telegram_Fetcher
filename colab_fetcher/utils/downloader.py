@@ -5,6 +5,7 @@ from tqdm import tqdm
 from humanize import naturalsize
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
+from colab_fetcher.utils.helper import format_duration
 
 # Track active downloads
 active_downloads = {}
@@ -65,8 +66,8 @@ async def download_with_progress(client, message: Message, file_path: str):
                 f"├📥 <b>Downloaded »</b> {naturalsize(current)}\n"
                 f"├📁 <b>Total Size »</b> {naturalsize(total)}\n"
                 f"├⚡ <b>Speed »</b> {naturalsize(speed)}/s\n"
-                f"├⏱️ <b>Elapsed »</b> {time.strftime('%M:%S', time.gmtime(elapsed))}\n"
-                f"╰⏳ <b>ETA »</b> {time.strftime('%M:%S', time.gmtime(eta))}"
+                f"├⏱️ <b>Elapsed »</b> {format_duration(elapsed)}\n"
+                f"╰⏳ <b>ETA »</b> {format_duration(eta)}"
             )
 
             # Update message max every 5 seconds or 5% progress
