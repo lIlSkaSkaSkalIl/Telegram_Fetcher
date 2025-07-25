@@ -26,7 +26,16 @@ def get_file_extension(message: Message) -> str:
     else:
         ext = ".bin"
     return ext.lower()
-
+    
+def format_duration(seconds: float) -> str:
+    minutes = int(seconds) // 60
+    secs = int(seconds) % 60
+    parts = []
+    if minutes > 0:
+        parts.append(f"{minutes}m")
+    parts.append(f"{secs}s")
+    return " ".join(parts)
+    
 def get_start_message() -> str:
     return (
         "👋 Hello! I'm your **Telegram Fetcher** bot.\n\n"
@@ -37,11 +46,12 @@ def get_start_message() -> str:
     )
 
 
-def download_complete_message(file_path: str, unique_name: str) -> str:
+def download_complete_message(file_path: str, unique_name: str, elapsed_time: float) -> str:
     return (
         f"✅ <b>Download Complete!</b>\n\n"
-        f"📂 <b>Saved As:</b> <code>{unique_name}</code>\n"
-        f"📁 <b>Size:</b> {naturalsize(os.path.getsize(file_path))}"
+        f"📂 <b>Saved As »</b> <code>{unique_name}</code>\n"
+        f"📁 <b>Total Size »</b> {naturalsize(os.path.getsize(file_path))}\n"
+        f"⏱️ <b>Saved Time »</b> {format_duration(elapsed_time)}"
     )
 
 def get_unique_filename(directory: str, message: Message) -> str:
