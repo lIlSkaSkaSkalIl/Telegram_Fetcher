@@ -7,10 +7,9 @@ from pyrogram.enums import ParseMode
 from colab_fetcher.utils.logger import logger
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
-from colab_fetcher.utils.helper import get_unique_filename, get_start_message, send_error, download_complete_message
+from colab_fetcher.utils.helper import get_unique_filename, get_start_message, send_error, download_complete_message, get_output_directory
 from colab_fetcher.utils.downloader import download_with_progress, active_downloads
 from colab_fetcher.utils.file_validator import is_allowed_file
-
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message: Message):
@@ -32,7 +31,7 @@ async def tgupload_command(client, message: Message):
 @app.on_message(filters.document | filters.video | filters.audio | filters.photo)
 async def handle_file_upload(client, message: Message):
     try:
-        output_dir = "/content/downloads"
+        output_dir = get_output_directory() 
         unique_name = get_unique_filename(output_dir, message)
         file_path = os.path.join(output_dir, unique_name)
 
