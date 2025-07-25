@@ -10,7 +10,7 @@ from colab_fetcher.utils.helper import format_duration
 # Track active downloads
 active_downloads = {}
 
-async def download_with_progress(client, message: Message, file_path: str):
+async def download_with_progress(client, message: Message, file_path: str, output_dir: str):
     """Enhanced downloader with progress bar and cancellation"""
     start_time = time.time()
     filename = os.path.basename(file_path)
@@ -69,6 +69,7 @@ async def download_with_progress(client, message: Message, file_path: str):
                 f"├⚡ <b>Speed »</b> {naturalsize(speed)}/s\n"
                 f"├⏱️ <b>Elapsed »</b> {format_duration(elapsed)}\n"
                 f"╰⏳ <b>ETA »</b> {format_duration(eta)}"
+                f"╰💾 <b>Saved To »</b> {output_dir}"
             )
 
             # Update message max every 5 seconds or 5% progress
