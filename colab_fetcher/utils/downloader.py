@@ -105,12 +105,14 @@ async def download_with_progress(client, message: Message, file_path: str):
                         "❌ Download cancelled by user",
                         reply_markup=None
                     )
-                return None
+                return None, None
 
             # Download completed successfully
             if progress_msg:
                 await progress_msg.delete()
-            return file_path
+
+            elapsed = time.time() - start_time
+            return file_path, elapsed
 
         except Exception as e:
             if progress_msg and not is_cancelled:
@@ -118,7 +120,7 @@ async def download_with_progress(client, message: Message, file_path: str):
                     f"⚠️ Download error: {str(e)}",
                     reply_markup=None
                 )
-            return None
+            return None, None
             
         finally:
             # Cleanup
