@@ -62,11 +62,11 @@ async def download_with_progress(client, message: Message, file_path: str):
             progress_text = (
                 f"<b>Downloading {filename}</b>\n\n"
                 f"╭「{'█' * filled}{'░' * (14 - filled)}」 {percent:.1f}%\n"
-                f"├📥 <b>Downloaded:</b> {naturalsize(current)}\n"
-                f"├📁 <b>Total:</b> {naturalsize(total)}\n"
-                f"├⚡ <b>Speed:</b> {naturalsize(speed)}/s\n"
-                f"├⏱️ <b>Elapsed:</b> {time.strftime('%M:%S', time.gmtime(elapsed))}\n"
-                f"╰⏳ <b>ETA:</b> {time.strftime('%M:%S', time.gmtime(eta))}"
+                f"├📥 <b>Downloaded »</b> {naturalsize(current)}\n"
+                f"├📁 <b>Total Size »</b> {naturalsize(total)}\n"
+                f"├⚡ <b>Speed »</b> {naturalsize(speed)}/s\n"
+                f"├⏱️ <b>Elapsed »</b> {time.strftime('%M:%S', time.gmtime(elapsed))}\n"
+                f"╰⏳ <b>ETA »</b> {time.strftime('%M:%S', time.gmtime(eta))}"
             )
 
             # Update message max every 5 seconds or 5% progress
