@@ -7,7 +7,7 @@ from pyrogram.enums import ParseMode
 from colab_fetcher.utils.logger import logger
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
-from colab_fetcher.utils.helper import get_unique_filename, get_start_message, send_error
+from colab_fetcher.utils.helper import get_unique_filename, get_start_message, send_error, download_complete_message
 from colab_fetcher.utils.downloader import download_with_progress, active_downloads
 from colab_fetcher.utils.file_validator import is_allowed_file
 
