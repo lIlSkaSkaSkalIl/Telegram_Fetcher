@@ -46,12 +46,13 @@ def get_start_message() -> str:
     )
 
 
-def download_complete_message(file_path: str, unique_name: str, elapsed_time: float) -> str:
+def download_complete_message(file_path: str, unique_name: str, output_dir: str, elapsed_time: float) -> str:
     return (
         f"✅ <b>Download Complete!</b>\n\n"
-        f"📂 <b>Saved As »</b> <code>{unique_name}</code>\n"
-        f"📁 <b>Total Size »</b> {naturalsize(os.path.getsize(file_path))}\n"
-        f"⏱️ <b>Saved Time »</b> {format_duration(elapsed_time)}"
+        f"╭📂 <b>File Name »</b> <code>{unique_name}</code>\n"
+        f"├📁 <b>Size »</b> {naturalsize(os.path.getsize(file_path))}\n"
+        f"├⏱️ <b>Saved Time »</b> {format_duration(elapsed_time)}\n"
+        f"╰💾 <b>Saved To »</b> {output_dir}"
     )
 
 def get_unique_filename(directory: str, message: Message) -> str:
