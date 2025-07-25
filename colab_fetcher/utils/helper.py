@@ -107,3 +107,16 @@ async def send_error(message: Message, error_type: str):
         error_messages.get(error_type, "Terjadi kesalahan tidak diketahui"),
         parse_mode=ParseMode.HTML
     )
+
+
+def get_output_directory() -> str:
+    drive_path = "/content/drive/MyDrive/Colab Fetcher"
+    local_path = "/content/downloads"
+
+    if os.path.exists("/content/drive") and os.path.ismount("/content/drive"):
+        os.makedirs(drive_path, exist_ok=True)
+        return drive_path
+    else:
+        os.makedirs(local_path, exist_ok=True)
+        return local_path
+
