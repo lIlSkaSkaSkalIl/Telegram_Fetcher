@@ -36,12 +36,12 @@ async def handle_file_upload(client, message: Message):
         unique_name = get_unique_filename(output_dir, message)
         file_path = os.path.join(output_dir, unique_name)
 
-        downloaded_path = await download_with_progress(client, message, file_path)
+        downloaded_path, elapsed_time = await download_with_progress(client, message, file_path)
 
         if not downloaded_path:
             return
 
-        complete_message = download_complete_message(downloaded_path, unique_name) 
+        complete_message = download_complete_message(downloaded_path, unique_name, elapsed_time) 
         await message.reply_text(
             complete_message,
             parse_mode=ParseMode.HTML
