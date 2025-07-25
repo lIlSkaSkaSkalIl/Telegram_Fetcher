@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
+from humanize import naturalsize
 
 def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove unsupported characters."""
@@ -33,6 +34,14 @@ def get_start_message() -> str:
         "💾 By default, files will be saved to the **local Colab storage**.\n\n"
         "☁️ If you want to upload to **Google Drive**, please make sure to *mount* your drive first.\n"
         "📂 Use the available commands to start uploading."
+    )
+
+
+def download_complete_message(file_path: str, unique_name: str) -> str:
+    return (
+        f"✅ <b>Download Complete!</b>\n\n"
+        f"📂 <b>Saved As:</b> <code>{unique_name}</code>\n"
+        f"📁 <b>Size:</b> {naturalsize(os.path.getsize(file_path))}"
     )
 
 def get_unique_filename(directory: str, message: Message) -> str:
