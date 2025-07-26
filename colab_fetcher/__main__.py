@@ -152,7 +152,7 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
                 filename, current, total, speed, elapsed, eta, output_dir
             )
 
-            if time.time() - last_update >= 5:
+            if time.time() - last_update >= 3:
                 if progress_text != last_progress_text:
                     try:
                         if progress_msg:
@@ -175,44 +175,100 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
         try:
             file_path = await message.download(
                 file_name=file_path,
-                progress=progress
-            )
 
-            if is_cancelled:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                return None, None
+async def download_with_progress(client, message: Message, file_path: str, output_dir: str):
+    start_time = time.time()
+    filename = os.path.basename(file_path)
+    progress_msg = None
+    is_cancelled = False
+    last_progress_text = None
+    last_update = 0
 
-            if progress_msg:
+    # Cancel button
+    cancel_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_dl_{message.id}")
+    ]])
+
+    active_downloads[message.id] = False
+
+    async def progress(current, total):
+        nonlocal progress_msg, is_cancelled, last_progress_text, last_update
+
+        # Check cancel
+        if active_downloads.get(message.id):
+            is_cancelled = True
+            raise asyncio.CancelledError()
+
+        elapsed = time.time() - start_time
+        speed = current / elapsed if elapsed > 0 else 0
+        eta = (total - current) / speed if speed > 0 else 0
+
+        progress_text = get_progress_text(
+            filename, current, total, speed, elapsed, eta, output_dir
+        )
+
+        # Update setiap 5 detik atau jika isi berubah
+        if time.time() - last_update >= 5:
+            if progress_text != last_progress_text:
                 try:
-                    await progress_msg.delete()
+                    if progress_msg:
+                        await progress_msg.edit_text(
+                            progress_text,
+                            reply_markup=cancel_markup,
+                            parse_mode=ParseMode.HTML
+                        )
+                    else:
+                        progress_msg = await message.reply_text(
+                            progress_text,
+                            reply_markup=cancel_markup,
+                            parse_mode=ParseMode.HTML
+                        )
+                    last_progress_text = progress_text
+                    last_update = time.time()
                 except:
                     pass
 
-            elapsed = time.time() - start_time
-            return file_path, elapsed
+    try:
+        file_path = await message.download(
+            file_name=file_path,
+            progress=progress
+        )
 
-        except asyncio.CancelledError:
-            if progress_msg:
-                try:
-                    await progress_msg.edit_text("❌ Download cancelled by user", reply_markup=None)
-                except:
-                    pass
+        if is_cancelled:
             if os.path.exists(file_path):
                 os.remove(file_path)
             return None, None
 
-        except Exception as e:
-            if progress_msg:
-                try:
-                    await progress_msg.edit_text(f"⚠️ Download error: {str(e)}", reply_markup=None)
-                except:
-                    pass
-            return None, None
+        if progress_msg:
+            try:
+                await progress_msg.delete()
+            except:
+                pass
 
-        finally:
-            active_downloads.pop(message.id, None)
+        elapsed = time.time() - start_time
+        return file_path, elapsed
 
+    except asyncio.CancelledError:
+        if progress_msg:
+            try:
+                await progress_msg.edit_text("❌ Download cancelled by user", reply_markup=None)
+            except:
+                pass
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return None, None
+
+    except Exception as e:
+        if progress_msg:
+            try:
+                await progress_msg.edit_text(f"⚠️ Download error: {str(e)}", reply_markup=None)
+            except:
+                pass
+        return None, None
+
+    finally:
+        active_downloads.pop(message.id, None)
+                
 def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove unsupported characters."""
     return "".join(c for c in name if c.isalnum() or c in (' ', '.', '_')).rstrip()
