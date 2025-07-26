@@ -46,7 +46,7 @@ def get_start_message() -> str:
     )
 
 
-def download_complete_message(file_path: str, unique_name: str, output_dir: str, elapsed_time: float) -> str:
+def download_complete_message(file_path: str, unique_name: str, elapsed_time: float, output_dir: str) -> str:
     return (
         f"✅ <b>Download Complete!</b>\n\n"
         f"╭📂 <b>File Name »</b> <code>{unique_name}</code>\n"
