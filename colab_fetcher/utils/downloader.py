@@ -7,24 +7,23 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 from colab_fetcher.utils.helper import format_duration
 
-# Track active downloads
 active_downloads = {}
 
 async def download_with_progress(client, message: Message, file_path: str, output_dir: str):
-    """Enhanced downloader with progress bar and cancellation"""
     start_time = time.time()
     filename = os.path.basename(file_path)
     media_type = message.media.value.capitalize()
     progress_msg = None
     is_cancelled = False
+    last_progress_text = None
+    last_update = 0
 
-    # Setup cancel button
+    # Cancel button markup
     cancel_markup = InlineKeyboardMarkup([[
         InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_dl_{message.id}")
     ]])
 
-    # Register active download
-    active_downloads[message.id] = False
+    active_downloads[message.id] = False  # Register download
 
     with tqdm(
         total=getattr(message.document, "file_size", 0),
@@ -34,32 +33,29 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
         miniters=1,
         desc=filename
     ) as pbar:
-        last_update = 0
-        
+
         async def progress(current, total):
-            nonlocal last_update, progress_msg, is_cancelled
-            
-            # Check for cancellation
-            if active_downloads.get(message.id, False):
+            nonlocal progress_msg, is_cancelled, last_progress_text, last_update
+
+            if active_downloads.get(message.id):
                 is_cancelled = True
                 if progress_msg:
-                    await progress_msg.edit_text(
-                        "❌ Download cancelled by user",
-                        reply_markup=None
-                    )
-                return False  # Stop download gracefully
+                    try:
+                        await progress_msg.edit_text("❌ Download cancelled by user", reply_markup=None)
+                    except Exception as e:
+                        pass  # Suppress cancellation display error
+                return
 
-            # Update progress bar
+            # Update tqdm
             pbar.update(current - pbar.n)
-            
-            # Calculate metrics
+
+            # Calculate progress info
             elapsed = time.time() - start_time
             speed = current / elapsed if elapsed > 0 else 0
             eta = (total - current) / speed if speed > 0 else 0
             percent = current / total * 100
-            
-            # Format progress message
             filled = int(14 * percent / 100)
+
             progress_text = (
                 f"<b>Downloading...</b>\n\n"
                 f"<b>{filename} »</b>\n\n"
@@ -72,25 +68,25 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
                 f"╰💾 <b>Saved To »</b> {output_dir}"
             )
 
-            # Update message max every 5 seconds or 5% progress
-            if time.time() - last_update >= 5 or percent - last_update >= 5:
-                try:
-                    if progress_msg:
-                        await progress_msg.edit_text(
-                            progress_text,
-                            reply_markup=cancel_markup,
-                            parse_mode=ParseMode.HTML
-                        )
-                    else:
-                        progress_msg = await message.reply_text(
-                            progress_text,
-                            reply_markup=cancel_markup,
-                            parse_mode=ParseMode.HTML
-                        )
-                    last_update = time.time()
-                except:
-                    pass
-            return True
+            if (time.time() - last_update >= 5 or abs(percent - pbar.n / total * 100) >= 5):
+                if progress_text != last_progress_text:
+                    try:
+                        if progress_msg:
+                            await progress_msg.edit_text(
+                                progress_text,
+                                reply_markup=cancel_markup,
+                                parse_mode=ParseMode.HTML
+                            )
+                        else:
+                            progress_msg = await message.reply_text(
+                                progress_text,
+                                reply_markup=cancel_markup,
+                                parse_mode=ParseMode.HTML
+                            )
+                        last_progress_text = progress_text
+                        last_update = time.time()
+                    except Exception as e:
+                        pass  # Avoid crash if edit_text fails
 
         try:
             # Start download
@@ -98,33 +94,33 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
                 file_name=file_path,
                 progress=progress
             )
-            
-            # Handle cancellation
+
+            # If cancelled
             if is_cancelled:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                if progress_msg:
-                    await progress_msg.edit_text(
-                        "❌ Download cancelled by user",
-                        reply_markup=None
-                    )
+                try:
+                    if file_path and os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as e:
+                    pass
                 return None, None
 
-            # Download completed successfully
+            # Delete progress message on success
             if progress_msg:
-                await progress_msg.delete()
+                try:
+                    await progress_msg.delete()
+                except:
+                    pass
 
             elapsed = time.time() - start_time
             return file_path, elapsed
 
         except Exception as e:
             if progress_msg and not is_cancelled:
-                await progress_msg.edit_text(
-                    f"⚠️ Download error: {str(e)}",
-                    reply_markup=None
-                )
+                try:
+                    await progress_msg.edit_text(f"⚠️ Download error: {str(e)}", reply_markup=None)
+                except:
+                    pass
             return None, None
-            
+
         finally:
-            # Cleanup
             active_downloads.pop(message.id, None)
