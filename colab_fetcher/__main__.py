@@ -66,13 +66,20 @@ async def handle_file_upload(client, message: Message):
 @app.on_callback_query(filters.regex(r"cancel_dl_(\d+)"))
 async def handle_cancel(client, callback_query):
     message_id = int(callback_query.data.split("_")[-1])
-
+    
     if message_id in active_downloads:
+        # Set cancellation flag
         active_downloads[message_id] = True
-        await callback_query.answer("Cancelling download...")
+        
+        # Cancel the task if it exists
+        task = download_tasks.get(message_id)
+        if task and not task.done():
+            task.cancel()
+        
+        await callback_query.answer("Download cancellation requested...")
     else:
         await callback_query.answer("No active download to cancel", show_alert=True)
-
+        
 
 if __name__ == "__main__":
     logger.info("Starting the bot...")
