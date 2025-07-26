@@ -5,7 +5,7 @@ from tqdm import tqdm
 from humanize import naturalsize
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
-from colab_fetcher.utils.helper import format_duration
+from colab_fetcher.utils.helper import format_duration, get_progress_text
 
 active_downloads = {}
 
