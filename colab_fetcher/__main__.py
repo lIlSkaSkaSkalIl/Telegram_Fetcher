@@ -14,8 +14,6 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from pathlib import Path
 
 from colab_fetcher import load_credentials
-from colab_fetcher.utils.logger import logger
-from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
 
 active_downloads = {}
 
