@@ -5,6 +5,7 @@ from tqdm import tqdm
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 from collections import defaultdict
+from colab_fetcher.utils.helper import get_progress_text
 
 # Gunakan defaultdict untuk menghindari KeyError
 active_downloads = defaultdict(bool)
