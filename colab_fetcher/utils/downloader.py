@@ -53,19 +53,15 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
             elapsed = time.time() - start_time
             speed = current / elapsed if elapsed > 0 else 0
             eta = (total - current) / speed if speed > 0 else 0
-            percent = current / total * 100
-            filled = int(14 * percent / 100)
-
-            progress_text = (
-                f"<b>Downloading...</b>\n\n"
-                f"<b>{filename} »</b>\n\n"
-                f"╭「{'█' * filled}{'░' * (14 - filled)}」 {percent:.1f}%\n"
-                f"├📥 <b>Downloaded »</b> {naturalsize(current)}\n"
-                f"├📁 <b>Total Size »</b> {naturalsize(total)}\n"
-                f"├⚡ <b>Speed »</b> {naturalsize(speed)}/s\n"
-                f"├⏱️ <b>Elapsed »</b> {format_duration(elapsed)}\n"
-                f"├⏳ <b>ETA »</b> {format_duration(eta)}\n"
-                f"╰💾 <b>Saved To »</b> {output_dir}"
+            
+            progress_text = get_progress_text(
+                filename=filename,
+                current=current,
+                total=total,
+                speed=speed,
+                elapsed=elapsed,
+                eta=eta,
+                output_dir=output_dir
             )
 
             if (time.time() - last_update >= 5 or abs(percent - pbar.n / total * 100) >= 5):
