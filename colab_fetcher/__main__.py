@@ -7,7 +7,7 @@ from pyrogram.enums import ParseMode
 from colab_fetcher.utils.logger import logger
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.user_state import set_user_state, get_user_state, clear_user_state
-from colab_fetcher.utils.helper import get_unique_filename, get_start_message, send_error, download_complete_message, get_output_directory
+from colab_fetcher.utils.helper import get_unique_filename, get_start_message, get_tgupload_message, send_error, download_complete_message, get_output_directory
 from colab_fetcher.utils.downloader import download_with_progress, active_downloads
 from colab_fetcher.utils.file_validator import is_allowed_file
 
@@ -26,7 +26,13 @@ async def start_handler(client, message: Message):
 async def tgupload_command(client, message: Message):
     try:
         logger.info(f"Received /tgupload command from user {message.from_user.id}")
-        await message.reply_text("Please send the Telegram file you want to upload.")
+
+        await client.send_message(
+            chat_id=message.chat.id,
+            text=get_tgupload_message(),
+            reply_to_message_id=message.id
+        )
+
         set_user_state(message.from_user.id, "waiting_for_file")
         logger.info(f"Set user {message.from_user.id} state to 'waiting_for_file'")
     except Exception as e:
