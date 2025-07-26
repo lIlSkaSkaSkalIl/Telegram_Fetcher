@@ -45,6 +45,22 @@ def get_start_message() -> str:
         "📁 Use available commands to begin uploading!"
     )
 
+def get_progress_text(filename, current, total, speed, elapsed, eta, output_dir):
+    percent = current / total * 100
+    filled = int(14 * percent / 100)
+    bar = '█' * filled + '░' * (14 - filled)
+                        
+    return (
+        f"<b>📥 Downloading...</b>\n\n"
+        f"<b>{filename} »</b>\n\n"
+        f"╭「{bar}」 {percent:.1f}%\n"
+        f"├✅ <b>Downloaded:</b> {naturalsize(current)}\n"
+        f"├📦 <b>Total Size:</b> {naturalsize(total)}\n"
+        f"├⚡ <b>Speed:</b> {naturalsize(speed)}/s\n"
+        f"├⏱️ <b>Elapsed:</b> {format_duration(elapsed)}\n"
+        f"├⏳ <b>ETA:</b> {format_duration(eta)}\n"
+        f"╰💾 <b>Saved To:</b> {output_dir}"
+    )
 
 def get_tgupload_message() -> str:
     return (
