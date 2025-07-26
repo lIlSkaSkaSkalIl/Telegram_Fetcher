@@ -46,6 +46,14 @@ def get_start_message() -> str:
     )
 
 
+def get_tgupload_message() -> str:
+    return (
+        "📥 <b>Telegram File Upload</b>\n\n"
+        "Please send the file you want to upload from Telegram.\n"
+        "Make sure to send it as a <b>document</b> for best results.\n\n"
+        "⏳ Waiting for your file..."
+    )
+
 def download_complete_message(file_path: str, unique_name: str, elapsed_time: float, output_dir: str) -> str:
     return (
         f"✅ <b>Download Complete!</b>\n\n"
