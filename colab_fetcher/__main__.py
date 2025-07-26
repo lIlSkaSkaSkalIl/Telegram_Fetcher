@@ -14,6 +14,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from pathlib import Path
 
 from colab_fetcher import load_credentials
+from colab_fetcher.utils.client import app
 
 active_downloads = {}
 
@@ -386,20 +387,6 @@ def clear_user_state(user_id):
         del state_dict[str(user_id)]
         save_user_state(state_dict)
 
-logger = setup_logger()
-
-logger.info("Loading credentials...")
-creds = load_credentials()
-logger.info("Credentials loaded successfully.")
-
-app = Client(
-    "my_bot",
-    api_id=creds["api_id"],
-    api_hash=creds["api_hash"],
-    bot_token=creds["bot_token"]
-)
-
-logger.info("Pyrogram client initialized.")
 
 if __name__ == "__main__":
     logger.info("Starting the bot...")
