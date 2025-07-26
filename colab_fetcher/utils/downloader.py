@@ -64,7 +64,7 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
                 output_dir=output_dir
             )
 
-            if (time.time() - last_update >= 5 or abs(percent - pbar.n / total * 100) >= 5):
+            if (time.time() - last_update >= 5:
                 if progress_text != last_progress_text:
                     try:
                         if progress_msg:
