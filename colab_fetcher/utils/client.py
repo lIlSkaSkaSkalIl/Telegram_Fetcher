@@ -1,5 +1,5 @@
 from pyrogram import Client
-from colab_fetcher import load_credentials, logger
+from colab_fetcher import load_credentials
 from colab_fetcher.utils.logging import logger
 
 logger.info("Loading credentials...")
