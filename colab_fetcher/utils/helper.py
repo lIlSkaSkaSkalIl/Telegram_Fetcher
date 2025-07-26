@@ -38,11 +38,11 @@ def format_duration(seconds: float) -> str:
     
 def get_start_message() -> str:
     return (
-        "👋 Hello! I'm your **Telegram Fetcher** bot.\n\n"
-        "📥 Send me a file, or command and I'll handle it for you.\n"
-        "💾 By default, files will be saved to the **local Colab storage**.\n\n"
-        "☁️ If you want to upload to **Google Drive**, please make sure to *mount* your drive first.\n"
-        "📂 Use the available commands to start uploading."
+        "👋 <b>Hello!</b> I’m your <b>Telegram Fetcher</b> bot.\n\n"
+        "📤 Send me a file or command and I’ll handle it.\n"
+        "💾 Files will be saved to <b>local Colab storage</b>.\n\n"
+        "☁️ To upload to <b>Google Drive</b>, make sure you’ve <i>mounted</i> it first.\n"
+        "📁 Use available commands to begin uploading!"
     )
 
 
