@@ -15,7 +15,11 @@ from colab_fetcher.utils.file_validator import is_allowed_file
 async def start_handler(client, message: Message):
     user_id = message.from_user.id
     logger.info(f"/start command received from user {user_id}")
-    await message.reply_text(get_start_message())
+    await client.send_message(
+        chat_id=message.chat.id,
+        text=get_start_message(),
+        reply_to_message_id=message.id
+    )
     logger.info("Start message sent.")
 
 @app.on_message(filters.command("tgupload"))
