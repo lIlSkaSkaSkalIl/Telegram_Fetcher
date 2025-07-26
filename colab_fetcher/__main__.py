@@ -51,8 +51,10 @@ async def handle_file_upload(client, message: Message):
             return
 
         complete_message = download_complete_message(downloaded_path, unique_name, elapsed_time, output_dir) 
-        await message.reply_text(
-            complete_message,
+        await client.send_message(
+            chat_id=message.chat.id,
+            text=complete_message,
+            reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
