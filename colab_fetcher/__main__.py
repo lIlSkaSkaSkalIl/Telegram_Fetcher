@@ -352,14 +352,6 @@ def get_output_directory() -> str:
         os.makedirs(local_path, exist_ok=True)
         return local_path
 
-def setup_logger():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(levelname)s %(name)s %(message)s",
-        handlers=[logging.StreamHandler()]
-    )
-    return logging.getLogger("colab_fetcher")
-
 STATE_FILE = Path(__file__).resolve().parent.parent / "config/user_state.json"
 STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
