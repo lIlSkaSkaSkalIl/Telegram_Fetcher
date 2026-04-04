@@ -2,6 +2,7 @@
 API_ID = 123 #@param {type:"number"}
 API_HASH = "" #@param {type:"string"}
 BOT_TOKEN = "" #@param {type:"string"}
+DOWNLOAD_PATH = "/content/downloads" #@param {type:"string"}
 
 import subprocess, json, shutil, os
 from pathlib import Path
@@ -68,7 +69,8 @@ def save_credentials():
     credentials = {
         "api_id": int(API_ID),
         "api_hash": API_HASH,
-        "bot_token": BOT_TOKEN
+        "bot_token": BOT_TOKEN,
+        "download_path": DOWNLOAD_PATH
     }
     try:
         with open(f"{CONFIG_DIR}/credentials.json", "w") as f:
