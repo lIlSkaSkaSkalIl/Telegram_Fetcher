@@ -334,8 +334,16 @@ def get_output_directory() -> str:
 
     download_path = creds.get("download_path", "/content/downloads")
 
-    # Pastikan folder ada
-    os.makedirs(download_path, exist_ok=True)
+    # Jika user memilih /content/drive, cek apakah sudah mount
+    if download_path.startswith("/content/drive"):
+        if not (os.path.exists("/content/drive") and os.path.ismount("/content/drive")):
+            # Mount Google Drive jika belum
+            from google.colab import drive
+            drive.mount("/content/drive")
+        os.makedirs(download_path, exist_ok=True)
+    else:
+        os.makedirs(download_path, exist_ok=True)
+
     return download_path
 
 STATE_FILE = Path(__file__).resolve().parent.parent / "config/user_state.json"
