@@ -91,8 +91,8 @@ def format_duration(seconds: float) -> str:
 
 def get_progress_text(filename, current, total, speed, elapsed, eta, output_dir):
     percent = current / total * 100
-    filled = int(14 * percent / 100)
-    bar = '█' * filled + '░' * (14 - filled)
+    filled = int(10 * percent / 100)
+    bar = '▰' * filled + '▱' * (10 - filled)
                         
     return (
         f"<b>📥 Downloading...</b>\n\n"
