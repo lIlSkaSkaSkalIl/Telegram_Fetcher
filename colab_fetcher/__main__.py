@@ -328,15 +328,15 @@ def is_allowed_file(message: Message) -> bool:
     return ext in EXTENSIONS
     
 def get_output_directory() -> str:
-    drive_path = "/content/drive/MyDrive/Colab Fetcher"
-    local_path = "/content/downloads"
+    # Baca konfigurasi dari credentials.json
+    with open("config/credentials.json") as f:
+        creds = json.load(f)
 
-    if os.path.exists("/content/drive") and os.path.ismount("/content/drive"):
-        os.makedirs(drive_path, exist_ok=True)
-        return drive_path
-    else:
-        os.makedirs(local_path, exist_ok=True)
-        return local_path
+    download_path = creds.get("download_path", "/content/downloads")
+
+    # Pastikan folder ada
+    os.makedirs(download_path, exist_ok=True)
+    return download_path
 
 STATE_FILE = Path(__file__).resolve().parent.parent / "config/user_state.json"
 STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
