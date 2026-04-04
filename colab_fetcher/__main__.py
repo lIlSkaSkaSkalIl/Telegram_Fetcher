@@ -329,7 +329,9 @@ def is_allowed_file(message: Message) -> bool:
     
 def get_output_directory() -> str:
     # Baca konfigurasi dari credentials.json
-    with open("/content/Telegram_Fetcher/colab_fetcher/config/credentials.json") as f:
+    repo_dir = "/content/Telegram_Fetcher"
+    config_dir = f"{repo_dir}/colab_fetcher/config"
+    with open(f"{config_dir}/credentials.json") as f:
         creds = json.load(f)
 
     download_path = creds.get("download_path", "/content/downloads")
