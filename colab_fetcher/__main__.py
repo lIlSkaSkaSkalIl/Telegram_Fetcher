@@ -242,7 +242,7 @@ async def send_batch_message(client, chat_id, user_id):
     more = total - len(display_list)
 
     text = (
-        f"📥 <b>{total} file ditambahkan ke antrian</b>\n\n"
+        f"📥 <b>Total Files: {total}</b>\n\n"
         "📝 <b>Daftar file:</b>\n"
     )
 
@@ -253,7 +253,7 @@ async def send_batch_message(client, chat_id, user_id):
     if more > 0:
         text += f"\n...dan {more} file lainnya"
 
-    text += "\n\n✅ Ditambahkan ke antrian download"
+    text += "\n✅ Ditambahkan ke antrian download"
 
     last_message = items[-1][0]
 
