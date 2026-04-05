@@ -19,6 +19,7 @@ from colab_fetcher.utils.logging import logger
 active_downloads = {}
 # Lock global untuk state management
 state_lock = asyncio.Lock()
+download_queue = asyncio.Queue()
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message: Message):
@@ -56,15 +57,13 @@ async def handle_file_upload(client, message: Message):
         unique_name = get_unique_filename(output_dir, message)
         file_path = os.path.join(output_dir, unique_name)
 
-        downloaded_path, elapsed_time = await download_with_progress(client, message, file_path, output_dir)
-
-        if not downloaded_path:
-            return
-
-        complete_message = download_complete_message(downloaded_path, unique_name, elapsed_time, output_dir) 
+        # Masukkan ke antrian
+        await download_queue.put((client, message, file_path, output_dir))
+        await set_user_state(message.from_user.id, "queued")
+        
         await client.send_message(
             chat_id=message.chat.id,
-            text=complete_message,
+            text=f"📥 File <b>{unique_name}</b> ditambahkan ke antrian download.",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
@@ -73,6 +72,11 @@ async def handle_file_upload(client, message: Message):
         logger.exception("Download error")
     finally:
         await clear_user_state(message.from_user.id)
+
+@app.on_message(filters.command("queue"))
+async def queue_command(client, message: Message):
+    size = download_queue.qsize()
+    await message.reply_text(f"📊 Antrian download: {size} file menunggu.", parse_mode=ParseMode.HTML)
 
 @app.on_callback_query(filters.regex(r"cancel_dl_(\d+)"))
 async def handle_cancel(client, callback_query):
@@ -83,6 +87,28 @@ async def handle_cancel(client, callback_query):
         await callback_query.answer("Cancelling download...")
     else:
         await callback_query.answer("No active download to cancel", show_alert=True)
+
+async def queue_worker():
+    while True:
+        client, message, file_path, output_dir = await download_queue.get()
+        logger.info(f"Start processing file {file_path} for user {message.from_user.id}")
+        try:
+            downloaded_path, elapsed_time = await download_with_progress(client, message, file_path, output_dir)
+            if downloaded_path:
+                complete_message = download_complete_message(downloaded_path, os.path.basename(file_path), elapsed_time, output_dir)
+                await client.send_message(
+                    chat_id=message.chat.id,
+                    text=complete_message,
+                    reply_to_message_id=message.id,
+                    parse_mode=ParseMode.HTML
+                )
+        except Exception as e:
+            await send_error(message, "download_failed", str(e))
+            logger.exception("Error in queue worker")
+        finally:
+            await clear_user_state(message.from_user.id)
+            download_queue.task_done()
+            logger.info(f"Finished processing file {file_path}")
 
 def format_duration(seconds: float) -> str:
     minutes = int(seconds) // 60
@@ -429,5 +455,10 @@ async def clear_user_state(user_id):
 
 if __name__ == "__main__":
     logger.info("Starting the bot...")
+
+    # Jalankan worker queue
+    loop = asyncio.get_event_loop()
+    loop.create_task(queue_worker())
+    
     app.run()
     logger.info("Bot stopped.")
