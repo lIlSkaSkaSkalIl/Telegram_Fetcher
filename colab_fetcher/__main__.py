@@ -75,15 +75,51 @@ async def handle_file_upload(client, message: Message):
 
 @app.on_message(filters.command("queue"))
 async def queue_command(client, message: Message):
+    queue_text = "📊 <b>Status Antrian</b>\n\n"
+
+    # Active download
+    if active_downloads:
+        queue_text += "📥 <b>Active Download:</b>\n"
+        for msg_id, info in active_downloads.items():
+            filename = info.get("filename", f"Pesan ID {msg_id}")
+            # Link ke pesan progress
+            queue_text += f"• <a href='https://t.me/c/{info['chat_id']}/{msg_id}'>{filename}</a>\n"
+    else:
+        queue_text += "✅ Tidak ada download aktif.\n"
+
+    # Queue size
     size = download_queue.qsize()
-    await message.reply_text(f"📊 Antrian download: {size} file menunggu.", parse_mode=ParseMode.HTML)
+    queue_text += f"\n📂 <b>Total file dalam antrian:</b> {size}\n"
+
+    # List file dalam queue
+    if size > 0:
+        queue_text += "\n📝 <b>Daftar file:</b>\n"
+        for idx, item in enumerate(list(download_queue._queue), start=1):
+            _, msg, file_path, _ = item
+            filename = os.path.basename(file_path)
+            queue_text += f"{idx}. {filename}\n"
+
+        # Hitung total size
+        total_size = 0
+        for _, msg, _, _ in list(download_queue._queue):
+            if msg.document:
+                total_size += msg.document.file_size or 0
+            elif msg.video:
+                total_size += msg.video.file_size or 0
+            elif msg.audio:
+                total_size += msg.audio.file_size or 0
+        if total_size > 0:
+            from humanize import naturalsize
+            queue_text += f"\n📦 <b>Total queue size:</b> {naturalsize(total_size)}\n"
+
+    await message.reply_text(queue_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 @app.on_callback_query(filters.regex(r"cancel_dl_(\d+)"))
 async def handle_cancel(client, callback_query):
     message_id = int(callback_query.data.split("_")[-1])
 
     if message_id in active_downloads:
-        active_downloads[message_id] = True
+        active_downloads[message_id]["cancelled"] = True
         await callback_query.answer("Cancelling download...")
     else:
         await callback_query.answer("No active download to cancel", show_alert=True)
@@ -149,13 +185,17 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
         InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_dl_{message.id}")
     ]])
 
-    active_downloads[message.id] = False
+    active_downloads[message.id] = {
+        "cancelled": False,
+        "filename": filename,
+        "chat_id": message.chat.id
+    }
 
     async def progress(current, total):
         nonlocal progress_msg, is_cancelled, last_progress_text, last_update
 
         # Check cancel
-        if active_downloads.get(message.id):
+        if active_downloads.get(message.id, {}).get("cancelled"):
             is_cancelled = True
             raise asyncio.CancelledError()
 
