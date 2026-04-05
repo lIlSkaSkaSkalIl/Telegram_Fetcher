@@ -368,7 +368,7 @@ async def save_user_state(state):
 async def set_user_state(user_id, state):
     state_dict = await load_user_state()
     state_dict[str(user_id)] = state
-    save_user_state(state_dict)
+    await save_user_state(state_dict)
 
 async def get_user_state(user_id):
     state = await load_user_state()
@@ -378,7 +378,7 @@ async def clear_user_state(user_id):
     state_dict = await load_user_state()
     if str(user_id) in state_dict:
         del state_dict[str(user_id)]
-        save_user_state(state_dict)
+        await save_user_state(state_dict)
 
 
 if __name__ == "__main__":
