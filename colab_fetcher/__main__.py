@@ -76,49 +76,49 @@ async def tgupload_command(client, message: Message):
         await send_error(message, "processing_error", str(e))
 
 # Tambahkan dictionary untuk menampung file sementara per user
-pending_files = {}
-batch_delay = 2
+batch_buffer = {}
+batch_tasks = {}
+BATCH_DELAY = 2  # detik
 
 @app.on_message(filters.document | filters.video | filters.audio | filters.photo)
 async def handle_file_upload(client, message: Message):
     try:
+        user_id = message.from_user.id
+
+        # Validasi tipe file
+        if not is_allowed_file(message):
+            return await send_error(message, "invalid_type")
+
         output_dir = get_output_directory() 
         unique_name = get_unique_filename(output_dir, message)
         file_path = os.path.join(output_dir, unique_name)
 
-        # Masukkan ke antrian
+        # Masukkan ke antrian download
         await download_queue.put((client, message, file_path, output_dir))
-        await set_user_state(message.from_user.id, "queued")
+        await set_user_state(user_id, "queued")
 
-        # Simpan file ke pending list user
-        user_id = message.from_user.id
-        if user_id not in pending_files:
-            pending_files[user_id] = []
-        pending_files[user_id].append(unique_name)
+        # ===== BATCHING MESSAGE =====
+        filename = os.path.basename(file_path)
 
-        # Jika user mengirim beberapa file, kita tunggu sejenak sebelum kirim pesan
-        await asyncio.sleep(batch_delay)  # jeda kecil untuk kumpulkan batch
-        if pending_files.get(user_id):
-            file_list = "\n".join([f"» {fname}" for fname in pending_files[user_id]])
-            msg_text = (
-                f"📥 <b>Total file:</b> {len(pending_files[user_id])}\n\n"
-                f"{file_list}\n\n"
-                f"Berhasil ditambahkan ke antrian download."
+        # Inisialisasi buffer jika belum ada
+        if user_id not in batch_buffer:
+            batch_buffer[user_id] = []
+
+        batch_buffer[user_id].append((message, filename))
+
+        # Jika belum ada task batching, buat
+        if user_id not in batch_tasks:
+            batch_tasks[user_id] = asyncio.create_task(
+                send_batch_message(client, message.chat.id, user_id)
             )
-            await client.send_message(
-                chat_id=message.chat.id,
-                text=msg_text,
-                reply_to_message_id=message.id,
-                parse_mode=ParseMode.HTML
-            )
-            # Kosongkan daftar setelah dikirim
-            pending_files[user_id] = []
+
     except Exception as e:
         await send_error(message, "download_failed", str(e))
         logger.exception("Download error")
+
     finally:
         await clear_user_state(message.from_user.id)
-
+        
 @app.on_message(filters.command("queue"))
 async def queue_command(client, message: Message):
     queue_text = "📊 <b>Status Antrian</b>\n\n"
@@ -225,6 +225,46 @@ async def cancel_all_command(client, message: Message):
             "✅ Tidak ada download aktif atau file dalam antrian untuk dibatalkan.",
             parse_mode=ParseMode.HTML
         )
+
+async def send_batch_message(client, chat_id, user_id):
+    await asyncio.sleep(BATCH_DELAY)
+
+    items = batch_buffer.get(user_id, [])
+    if not items:
+        return
+
+    total = len(items)
+    filenames = [name for _, name in items]
+
+    # Batasi tampilan max 10 file
+    display_list = filenames[:10]
+    more = total - len(display_list)
+
+    text = (
+        f"📥 <b>{total} file ditambahkan ke antrian</b>\n\n"
+        "📝 <b>Daftar file:</b>\n"
+    )
+
+    for name in display_list:
+        text += f"» {name}\n"
+
+    if more > 0:
+        text += f"\n...dan {more} file lainnya"
+
+    text += "\n\n✅ Ditambahkan ke antrian download"
+
+    last_message = items[-1][0]
+
+    await client.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_to_message_id=last_message.id,
+        parse_mode=ParseMode.HTML
+    )
+
+    # Cleanup
+    batch_buffer.pop(user_id, None)
+    batch_tasks.pop(user_id, None)
 
 def format_duration(seconds: float) -> str:
     minutes = int(seconds) // 60
