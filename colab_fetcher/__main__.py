@@ -83,7 +83,7 @@ async def queue_command(client, message: Message):
         for msg_id, info in active_downloads.items():
             filename = info.get("filename", f"Pesan ID {msg_id}")
             # Link ke pesan progress
-            queue_text += f"• <a href='https://t.me/c/{info['chat_id']}/{msg_id}'>{filename}</a>\n"
+            queue_text += f"<a href='https://t.me/c/{info['chat_id']}/{msg_id}'>{filename}</a>\n"
     else:
         queue_text += "✅ Tidak ada download aktif.\n"
 
@@ -145,6 +145,40 @@ async def queue_worker():
             await clear_user_state(message.from_user.id)
             download_queue.task_done()
             logger.info(f"Finished processing file {file_path}")
+
+@app.on_message(filters.command("cancelall"))
+async def cancel_all_command(client, message: Message):
+    cancelled_count = 0
+
+    # Batalkan semua download aktif
+    if active_downloads:
+        for msg_id in list(active_downloads.keys()):
+            active_downloads[msg_id]["cancelled"] = True
+            cancelled_count += 1
+
+    # Kosongkan queue
+    queue_size = download_queue.qsize()
+    while not download_queue.empty():
+        try:
+            download_queue.get_nowait()
+            download_queue.task_done()
+        except asyncio.QueueEmpty:
+            break
+
+    # Buat pesan konfirmasi
+    if cancelled_count > 0 or queue_size > 0:
+        await message.reply_text(
+            f"❌ Semua download dibatalkan.\n\n"
+            f"📥 Active cancelled: {cancelled_count}\n"
+            f"📂 Queue cleared: {queue_size}",
+            parse_mode=ParseMode.HTML
+        )
+        logger.info(f"User {message.from_user.id} cancelled {cancelled_count} active downloads and cleared {queue_size} queued files.")
+    else:
+        await message.reply_text(
+            "✅ Tidak ada download aktif atau file dalam antrian untuk dibatalkan.",
+            parse_mode=ParseMode.HTML
+        )
 
 def format_duration(seconds: float) -> str:
     minutes = int(seconds) // 60
