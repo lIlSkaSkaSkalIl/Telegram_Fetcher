@@ -75,6 +75,9 @@ async def tgupload_command(client, message: Message):
         logger.exception("Error in /tgupload handler")
         await send_error(message, "processing_error", str(e))
 
+# Tambahkan dictionary untuk menampung file sementara per user
+pending_files = {}
+batch_delay = 2
 
 @app.on_message(filters.document | filters.video | filters.audio | filters.photo)
 async def handle_file_upload(client, message: Message):
@@ -86,13 +89,30 @@ async def handle_file_upload(client, message: Message):
         # Masukkan ke antrian
         await download_queue.put((client, message, file_path, output_dir))
         await set_user_state(message.from_user.id, "queued")
-        
-        await client.send_message(
-            chat_id=message.chat.id,
-            text=f"📥 File <b>{unique_name}</b> ditambahkan ke antrian download.",
-            reply_to_message_id=message.id,
-            parse_mode=ParseMode.HTML
-        )
+
+        # Simpan file ke pending list user
+        user_id = message.from_user.id
+        if user_id not in pending_files:
+            pending_files[user_id] = []
+        pending_files[user_id].append(unique_name)
+
+        # Jika user mengirim beberapa file, kita tunggu sejenak sebelum kirim pesan
+        await asyncio.sleep(batch_delay)  # jeda kecil untuk kumpulkan batch
+        if pending_files.get(user_id):
+            file_list = "\n".join([f"» {fname}" for fname in pending_files[user_id]])
+            msg_text = (
+                f"📥 <b>Total file:</b> {len(pending_files[user_id])}\n\n"
+                f"{file_list}\n\n"
+                f"Berhasil ditambahkan ke antrian download."
+            )
+            await client.send_message(
+                chat_id=message.chat.id,
+                text=msg_text,
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
+            )
+            # Kosongkan daftar setelah dikirim
+            pending_files[user_id] = []
     except Exception as e:
         await send_error(message, "download_failed", str(e))
         logger.exception("Download error")
