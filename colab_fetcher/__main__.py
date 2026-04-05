@@ -33,6 +33,31 @@ async def start_handler(client, message: Message):
     )
     logger.info("Start message sent.")
 
+@app.on_message(filters.command("help") & filters.private)
+async def help_handler(client, message: Message):
+    help_text = (
+        "🛠️ <b>Telegram Fetcher Bot - Help</b>\n\n"
+        "Berikut adalah daftar command yang tersedia:\n\n"
+        "• <b>/start</b> - Memulai bot dan menampilkan pesan sambutan.\n"
+        "• <b>/tgupload</b> - Mengunggah file dari Telegram ke Colab storage.\n"
+        "• <b>/queue</b> - Menampilkan status antrian download, termasuk file aktif dan daftar file yang menunggu.\n"
+        "• <b>/cancelall</b> - Membatalkan semua download aktif dan mengosongkan antrian.\n"
+        "• <b>/help</b> - Menampilkan daftar command dan penjelasannya.\n\n"
+        "📂 <b>Cara penggunaan:</b>\n"
+        "1. Kirim file (document, video, audio, atau photo).\n"
+        "2. Bot akan menambahkan file ke antrian download.\n"
+        "3. Gunakan /queue untuk melihat status.\n"
+        "4. Gunakan /cancelall untuk membatalkan semua proses.\n\n"
+        "☁️ Pastikan Google Drive sudah di-mount jika ingin menyimpan ke Drive."
+    )
+
+    await client.send_message(
+        chat_id=message.chat.id,
+        text=help_text,
+        reply_to_message_id=message.id,
+        parse_mode=ParseMode.HTML
+    )
+
 @app.on_message(filters.command("tgupload"))
 async def tgupload_command(client, message: Message):
     try:
@@ -358,6 +383,7 @@ def get_start_message() -> str:
         "💾 Files will be saved to <b>local Colab storage</b>.\n\n"
         "☁️ To upload to <b>Google Drive</b>, make sure you’ve <i>mounted</i> it first.\n"
         "📁 Use available commands to begin uploading!"
+        "ℹ️ Type <b>/help</b> to see all available commands and their descriptions."
     )
 
 def get_tgupload_message() -> str:
