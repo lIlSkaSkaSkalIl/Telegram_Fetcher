@@ -529,9 +529,16 @@ async def clear_user_state(user_id):
 if __name__ == "__main__":
     logger.info("Starting the bot...")
 
-    # Jalankan worker queue
     loop = asyncio.get_event_loop()
-    loop.create_task(queue_worker())
-    
-    app.run()
+    worker_task = loop.create_task(queue_worker())
+
+    try:
+        app.run()
+    finally:
+        worker_task.cancel()
+        try:
+            loop.run_until_complete(worker_task)
+        except asyncio.CancelledError:
+            logger.info("Worker task cancelled cleanly.")
+
     logger.info("Bot stopped.")
