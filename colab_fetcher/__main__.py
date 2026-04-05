@@ -421,17 +421,20 @@ def smart_truncate_filename(filename: str, max_length: int = 20) -> str:
 
     separators = ['.', '_', '-', ' ']
 
-    # Ambil bagian depan jika ada separator
+    # Jika ada separator, ambil 2 bagian awal agar lebih informatif
     for sep in separators:
         parts = name.split(sep)
         if len(parts) >= 2:
-            return f"{parts[0]}..."
+            truncated = f"{parts[0]}_{parts[1]}..."
+            return f"{truncated}{ext}"
 
-    # Jika tidak ada separator → potong karakter
+    # Jika nama terlalu panjang, potong depan + belakang
     if len(name) > max_length:
-        return f"{name[:max_length]}..."
+        truncated = f"{name[:10]}...{name[-5:]}"
+        return f"{truncated}{ext}"
 
-    return name
+    # Default: tampilkan nama + ekstensi
+    return f"{name}{ext}"
 
 def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove unsupported characters."""
