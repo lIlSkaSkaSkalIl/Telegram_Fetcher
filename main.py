@@ -1,8 +1,43 @@
-#@title Telegram Fetcher
-API_ID = 123 #@param {type:"number"}
-API_HASH = "" #@param {type:"string"}
-BOT_TOKEN = "" #@param {type:"string"}
-DOWNLOAD_PATH = "/content/downloads" #@param {type:"string"}
+# @title <font color=red> 🖥️ Telegram Fetcher
+# @markdown <br><center><h2><font color=lime><strong>Fill all Credentials, Run The Cell and Start The Bot</strong></h2></center>
+# @markdown <br><br>
+
+# @markdown ---
+# @markdown
+# @markdown ⚠️ **Important Setup**
+# @markdown
+# @markdown This notebook now uses **Colab Secrets** instead of `#@param`.
+# @markdown
+# @markdown Before running this cell, add the following variables in the **🔑 Colab Secrets panel**:
+# @markdown
+# @markdown - `API_ID`
+# @markdown - `API_HASH`
+# @markdown - `BOT_TOKEN`
+# @markdown
+# @markdown 📍 You can open Secrets from the **left sidebar → 🔑 Secrets**
+# @markdown
+# @markdown After adding them, simply **run this cell to start the bot**.
+# @markdown
+# @markdown ---
+
+from google.colab import userdata
+
+API_ID = userdata.get("API_ID")
+API_HASH = userdata.get("API_HASH")
+BOT_TOKEN = userdata.get("BOT_TOKEN")
+DOWNLOAD_PATH = "/content/media_toolkit/downloads" #@param {type:"string"}
+
+required_vars = {
+    "API_ID": API_ID,
+    "API_HASH": API_HASH,
+    "BOT_TOKEN": BOT_TOKEN
+}
+
+for key, value in required_vars.items():
+    if value is None or value == "":
+        raise ValueError(f"Missing secret: {key}")
+
+API_ID = int(API_ID)
 
 import subprocess, json, shutil, os
 from pathlib import Path
@@ -13,14 +48,17 @@ REPO_URL = "https://github.com/lIlSkaSkaSkalIl/Telegram_Fetcher"
 REPO_DIR = "/content/Telegram_Fetcher"
 CONFIG_DIR = f"{REPO_DIR}/colab_fetcher/config"
 
-def log(msg, icon="🔧"):
-    """Custom logger dengan emoji."""
-    print(f"{icon} {msg}")
+APPNAME = "TelegramFetcher"
+
+def log(message, level="INFO"):
+    """Custom logger dengan format LEVEL:APPNAME:MESSAGE"""
+    print(f"{level}:{APPNAME}:{message}")
 
 # Remove default Colab sample data
 def remove_sample_data():
     if os.path.exists("/content/sample_data"):
         log("Removing /content/sample_data")
+
         shutil.rmtree("/content/sample_data")
 
 def validate_inputs():
@@ -50,7 +88,7 @@ def install_deps():
     if not os.path.exists(req_path):
         raise FileNotFoundError(f"File {req_path} tidak ditemukan!")
 
-    log("Menginstall dependencies...", icon="📦")
+    log("Menginstall dependencies...", level="INFO")
     process = subprocess.Popen(
         ["pip", "install", "-r", req_path],
         stdout=subprocess.PIPE,
@@ -59,7 +97,7 @@ def install_deps():
     )
     # Real-time output log
     for line in process.stdout:
-        log(line.strip(), icon="🔹")
+        log(line.strip(), level="DEBUG")
     if process.wait() != 0:
         raise RuntimeError("Instalasi gagal. Cek requirements.txt!")
 
@@ -75,13 +113,13 @@ def save_credentials():
     try:
         with open(f"{CONFIG_DIR}/credentials.json", "w") as f:
             json.dump(credentials, f, indent=4)
-        log("Credentials disimpan!", icon="🔑")
+        log("Credentials disimpan!", level="INFO")
     except Exception as e:
         raise IOError(f"Gagal menyimpan credentials: {e}")
 
 def run_bot():
     """Jalankan bot dari package colab_fetcher."""
-    log("Memulai bot...", icon="🚀")
+    log("Memulai bot...", level="INFO")
     try:
         !cd /content/Telegram_Fetcher/ && python3 -m colab_fetcher
     except subprocess.CalledProcessError as e:
@@ -90,12 +128,12 @@ def run_bot():
 
 try:
     remove_sample_data()
-    validate_inputs()
+    # validate_inputs()
     setup_repo()
     install_deps()
     save_credentials()
     clear_output()
     run_bot()
 except Exception as e:
-    log(f"ERROR: {str(e)}", icon="❌")
+    log(f"ERROR: {str(e)}", level="ERROR")
     raise
