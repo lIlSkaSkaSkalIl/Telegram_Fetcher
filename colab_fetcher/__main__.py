@@ -382,7 +382,7 @@ def get_start_message() -> str:
         "📤 Send me a file or command and I’ll handle it.\n"
         "💾 Files will be saved to <b>local Colab storage</b>.\n\n"
         "☁️ To upload to <b>Google Drive</b>, make sure you’ve <i>mounted</i> it first.\n"
-        "📁 Use available commands to begin uploading!"
+        "📁 Use available commands to begin uploading!.\n"
         "ℹ️ Type <b>/help</b> to see all available commands and their descriptions."
     )
 
