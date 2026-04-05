@@ -122,7 +122,7 @@ async def handle_file_upload(client, message: Message):
 @app.on_message(filters.command("queue"))
 async def queue_command(client, message: Message):
     queue_text = "📊 <b>Status Antrian</b>\n\n"
-
+    
     # Active download
     if active_downloads:
         queue_text += "📥 <b>Active Download:</b>\n"
@@ -136,14 +136,15 @@ async def queue_command(client, message: Message):
     # Queue size
     size = download_queue.qsize()
     queue_text += f"\n📂 <b>Total file dalam antrian:</b> {size}\n"
-
+    short_name = smart_truncate_filename(filename)
+    
     # List file dalam queue
     if size > 0:
         queue_text += "\n📝 <b>Daftar file:</b>\n"
         for idx, item in enumerate(list(download_queue._queue), start=1):
             _, msg, file_path, _ = item
             filename = os.path.basename(file_path)
-            queue_text += f"{idx}. {filename}\n"
+            queue_text += f"{idx}. {short_name}\n"
 
         # Hitung total size
         total_size = 0
@@ -246,7 +247,8 @@ async def send_batch_message(client, chat_id, user_id):
     )
 
     for name in display_list:
-        text += f"» {name}\n"
+        short_name = smart_truncate_filename(name)
+        text += f"» {short_name}\n"
 
     if more > 0:
         text += f"\n...dan {more} file lainnya"
@@ -279,10 +281,11 @@ def get_progress_text(filename, current, total, speed, elapsed, eta, output_dir)
     percent = current / total * 100
     filled = int(10 * percent / 100)
     bar = '▰' * filled + '▱' * (10 - filled)
+    short_name = smart_truncate_filename(filename)
                         
     return (
         f"<b>📥 Downloading...</b>\n\n"
-        f"<b>{filename} »</b>\n\n"
+        f"<b>{short_name} »</b>\n\n"
         f"╭「 {bar} 」 {percent:.1f}%\n"
         f"├✅ <b>Downloaded:</b> {naturalsize(current)}\n"
         f"├📦 <b>Total Size:</b> {naturalsize(total)}\n"
@@ -413,7 +416,24 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
 
     finally:
         active_downloads.pop(message.id, None)
-                
+
+def smart_truncate_filename(filename: str, max_length: int = 20) -> str:
+    name, ext = os.path.splitext(filename)
+
+    separators = ['.', '_', '-', ' ']
+
+    # Ambil bagian depan jika ada separator
+    for sep in separators:
+        parts = name.split(sep)
+        if len(parts) >= 2:
+            return f"{parts[0]}..."
+
+    # Jika tidak ada separator → potong karakter
+    if len(name) > max_length:
+        return f"{name[:max_length]}..."
+
+    return name
+
 def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove unsupported characters."""
     return "".join(c for c in name if c.isalnum() or c in (' ', '.', '_')).rstrip()
@@ -455,9 +475,10 @@ def get_tgupload_message() -> str:
     )
 
 def download_complete_message(file_path: str, unique_name: str, elapsed_time: float, output_dir: str) -> str:
+    short_name = smart_truncate_filename(unique_name)
     return (
         f"✅ <b>Download Complete!</b>\n\n"
-        f"╭📂 <b>File Name »</b> <code>{unique_name}</code>\n"
+        f"╭📂 <b>File Name »</b> <code>{short_name}</code>\n"
         f"├📁 <b>Size »</b> {naturalsize(os.path.getsize(file_path))}\n"
         f"├⏱️ <b>Saved Time »</b> {format_duration(elapsed_time)}\n"
         f"╰💾 <b>Saved To »</b> {output_dir}"
