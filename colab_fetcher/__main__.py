@@ -12,6 +12,7 @@ from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from pathlib import Path
 
+from colab_fetcher import CONFIG_PATH
 from colab_fetcher import load_credentials
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.logging import logger
@@ -477,9 +478,7 @@ def is_allowed_file(message: Message) -> bool:
     
 def get_output_directory() -> str:
     # Baca konfigurasi dari credentials.json
-    repo_dir = "/content/Telegram_Fetcher"
-    config_dir = f"{repo_dir}/colab_fetcher/config"
-    with open(f"{config_dir}/credentials.json") as f:
+    with open(CONFIG_PATH) as f:
         creds = json.load(f)
 
     download_path = creds.get("download_path", "/content/downloads")
