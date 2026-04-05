@@ -42,10 +42,12 @@ async def tgupload_command(client, message: Message):
             reply_to_message_id=message.id
         )
 
-        set_user_state(message.from_user.id, "waiting_for_file")
+        await set_user_state(message.from_user.id, "waiting_for_file")
         logger.info(f"Set user {message.from_user.id} state to 'waiting_for_file'")
     except Exception as e:
-        logger.error(f"Error in /tgupload handler: {e}")
+        logger.exception("Error in /tgupload handler")
+        await send_error(message, "processing_error", str(e))
+
 
 @app.on_message(filters.document | filters.video | filters.audio | filters.photo)
 async def handle_file_upload(client, message: Message):
@@ -67,10 +69,10 @@ async def handle_file_upload(client, message: Message):
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
-        await send_error(message, "download_failed")
-        logger.error(f"Download error: {e}")
+        await send_error(message, "download_failed", str(e))
+        logger.exception("Download error")
     finally:
-        clear_user_state(message.from_user.id)
+        await clear_user_state(message.from_user.id)
 
 @app.on_callback_query(filters.regex(r"cancel_dl_(\d+)"))
 async def handle_cancel(client, callback_query):
@@ -180,6 +182,16 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
         elapsed = time.time() - start_time
         return file_path, elapsed
 
+    except asyncio.TimeoutError:
+        if progress_msg:
+            try:
+                await progress_msg.edit_text("⏳ Download timeout", reply_markup=None)
+            except:
+                pass
+        await send_error(message, "timeout")
+        logger.exception("Download timeout")
+        return None, None
+
     except asyncio.CancelledError:
         if progress_msg:
             try:
@@ -188,6 +200,21 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
                 pass
         if os.path.exists(file_path):
             os.remove(file_path)
+        await send_error(message, "cancelled")
+        logger.info("Download cancelled by user")
+        return None, None
+
+    except PermissionError as e:
+        await send_error(message, "permission_denied", str(e))
+        logger.exception("Permission denied")
+        return None, None
+
+    except OSError as e:
+        if "network" in str(e).lower():
+            await send_error(message, "network_error", str(e))
+        else:
+            await send_error(message, "processing_error", str(e))
+        logger.exception("OS error during download")
         return None, None
 
     except Exception as e:
@@ -287,21 +314,40 @@ def get_unique_filename(directory: str, message: Message) -> str:
     
     return final_name
 
-async def send_error(message: Message, error_type: str):
-    """Mengirim pesan error yang user-friendly"""
+async def send_error(message: Message, error_type: str, detail: str = None):
+    """Mengirim pesan error yang user-friendly dengan detail tambahan"""
     error_messages = {
         "invalid_type": (
-            "❌ <b>File type not supported</b>\n"
-            "Hanya menerima: Video, Audio, Gambar, PDF, atau Archive"
+            "❌ <b>File type tidak didukung</b>\n"
+            "Hanya menerima: Video, Audio, Gambar, PDF, atau Archive."
         ),
-        "processing_error": "⚠️ <b>Terjadi error saat memproses file</b>",
-        "download_failed": "⏳ <b>Gagal mengunduh file</b>\nCoba lagi nanti"
+        "processing_error": (
+            "⚠️ <b>Terjadi error saat memproses file</b>\n"
+            "Silakan coba lagi atau kirim file lain."
+        ),
+        "download_failed": (
+            "⏳ <b>Gagal mengunduh file</b>\n"
+            "Pastikan koneksi stabil dan coba ulang."
+        ),
+        "drive_not_mounted": (
+            "⚠️ <b>Google Drive belum ter-mount</b>\n"
+            "Silakan mount terlebih dahulu sebelum upload."
+        ),
+        "file_too_large": (
+            "❌ <b>File terlalu besar</b>\n"
+            "Gunakan file dengan ukuran lebih kecil."
+        ),
+        "cancelled": "❌ <b>Download dibatalkan oleh user</b>",
+        "timeout": "⏳ <b>Download timeout</b>\nCoba ulang dengan koneksi lebih cepat.",
+        "permission_denied": "⚠️ <b>Tidak ada izin akses ke folder tujuan</b>",
+        "unsupported_format": "❌ <b>Format file tidak didukung</b>",
+        "network_error": "⚠️ <b>Koneksi terputus saat download</b>"
     }
     
-    await message.reply_text(
-        error_messages.get(error_type, "Terjadi kesalahan tidak diketahui"),
-        parse_mode=ParseMode.HTML
-    )
+    msg = error_messages.get(error_type, "Terjadi kesalahan tidak diketahui")
+    if detail:
+        msg += f"\n\n🔍 <b>Detail:</b> <code>{detail}</code>"
+    await message.reply_text(msg, parse_mode=ParseMode.HTML)
 
 # Dictionary ekstensi file
 EXTENSIONS = {
