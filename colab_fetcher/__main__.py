@@ -17,6 +17,7 @@ from colab_fetcher import load_credentials
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.logging import logger
 
+completed_downloads = {}
 active_downloads = {}
 # Lock global untuk state management
 state_lock = asyncio.Lock()
@@ -171,28 +172,6 @@ async def handle_cancel(client, callback_query):
     else:
         await callback_query.answer("No active download to cancel", show_alert=True)
 
-async def queue_worker():
-    while True:
-        client, message, file_path, output_dir = await download_queue.get()
-        logger.info(f"Start processing file {file_path} for user {message.from_user.id}")
-        try:
-            downloaded_path, elapsed_time = await download_with_progress(client, message, file_path, output_dir)
-            if downloaded_path:
-                complete_message = download_complete_message(downloaded_path, os.path.basename(file_path), elapsed_time, output_dir)
-                await client.send_message(
-                    chat_id=message.chat.id,
-                    text=complete_message,
-                    reply_to_message_id=message.id,
-                    parse_mode=ParseMode.HTML
-                )
-        except Exception as e:
-            await send_error(message, "download_failed", str(e))
-            logger.exception("Error in queue worker")
-        finally:
-            await clear_user_state(message.from_user.id)
-            download_queue.task_done()
-            logger.info(f"Finished processing file {file_path}")
-
 @app.on_message(filters.command("cancelall"))
 async def cancel_all_command(client, message: Message):
     cancelled_count = 0
@@ -226,6 +205,43 @@ async def cancel_all_command(client, message: Message):
             "✅ Tidak ada download aktif atau file dalam antrian untuk dibatalkan.",
             parse_mode=ParseMode.HTML
         )
+
+async def queue_worker():
+    while True:
+        client, message, file_path, output_dir = await download_queue.get()
+        user_id = message.from_user.id
+        logger.info(f"Start processing file {file_path} for user {user_id}")
+        try:
+            downloaded_path, elapsed_time = await download_with_progress(client, message, file_path, output_dir)
+            if downloaded_path:
+                # Simpan hasil ke completed_downloads
+                if user_id not in completed_downloads:
+                    completed_downloads[user_id] = []
+                completed_downloads[user_id].append({
+                    "filename": os.path.basename(file_path),
+                    "size": os.path.getsize(downloaded_path),
+                    "elapsed": elapsed_time
+                })
+
+                # Jika queue kosong, kirim ringkasan
+                if download_queue.qsize() == 0:
+                    summary_text = download_summary_message(user_id, output_dir)
+                    await client.send_message(
+                        chat_id=message.chat.id,
+                        text=summary_text,
+                        reply_to_message_id=message.id,
+                        parse_mode=ParseMode.HTML
+                    )
+                    # Cleanup
+                    completed_downloads.pop(user_id, None)
+
+        except Exception as e:
+            await send_error(message, "download_failed", str(e))
+            logger.exception("Error in queue worker")
+        finally:
+            await clear_user_state(user_id)
+            download_queue.task_done()
+            logger.info(f"Finished processing file {file_path}")
 
 async def send_batch_message(client, chat_id, user_id):
     await asyncio.sleep(BATCH_DELAY)
@@ -276,23 +292,6 @@ def format_duration(seconds: float) -> str:
         parts.append(f"{minutes}m")
     parts.append(f"{secs}s")
     return " ".join(parts)
-
-def get_progress_text(filename, current, total, speed, elapsed, eta, output_dir):
-    percent = current / total * 100
-    filled = int(10 * percent / 100)
-    bar = '▰' * filled + '▱' * (10 - filled)
-                        
-    return (
-        f"<b>📥 Downloading...</b>\n\n"
-        f"<b>» {filename}</b>\n\n"
-        f"╭「 {bar} 」 {percent:.1f}%\n"
-        f"├✅ <b>Downloaded:</b> {naturalsize(current)}\n"
-        f"├📦 <b>Total Size:</b> {naturalsize(total)}\n"
-        f"├⚡ <b>Speed:</b> {naturalsize(speed)}/s\n"
-        f"├⏱️ <b>Elapsed:</b> {format_duration(elapsed)}\n"
-        f"├⏳ <b>ETA:</b> {format_duration(eta)}\n"
-        f"╰💾 <b>Saved To:</b> {output_dir}"
-    )
 
 async def download_with_progress(client, message: Message, file_path: str, output_dir: str):
     start_time = time.time()
@@ -476,15 +475,42 @@ def get_tgupload_message() -> str:
         "⏳ Waiting for your file..."
     )
 
-def download_complete_message(file_path: str, unique_name: str, elapsed_time: float, output_dir: str) -> str:
-    short_name = smart_truncate_filename(unique_name)
+def get_progress_text(filename, current, total, speed, elapsed, eta, output_dir):
+    percent = current / total * 100
+    filled = int(10 * percent / 100)
+    bar = '▰' * filled + '▱' * (10 - filled)
+                        
     return (
-        f"✅ <b>Download Complete!</b>\n\n"
-        f"╭📂 <b>File Name »</b> <code>{short_name}</code>\n"
-        f"├📁 <b>Size »</b> {naturalsize(os.path.getsize(file_path))}\n"
-        f"├⏱️ <b>Saved Time »</b> {format_duration(elapsed_time)}\n"
+        f"<b>📥 Downloading...</b>\n\n"
+        f"<b>» {filename}</b>\n\n"
+        f"╭「 {bar} 」 {percent:.1f}%\n"
+        f"├✅ <b>Downloaded:</b> {naturalsize(current)}\n"
+        f"├📦 <b>Total Size:</b> {naturalsize(total)}\n"
+        f"├⚡ <b>Speed:</b> {naturalsize(speed)}/s\n"
+        f"├⏱️ <b>Elapsed:</b> {format_duration(elapsed)}\n"
+        f"├⏳ <b>ETA:</b> {format_duration(eta)}\n"
+        f"╰💾 <b>Saved To:</b> {output_dir}"
+    )
+
+def download_summary_message(user_id: int, output_dir: str) -> str:
+    items = completed_downloads.get(user_id, [])
+    total_files = len(items)
+    total_size = sum(i["size"] for i in items)
+    total_time = sum(i["elapsed"] for i in items)
+
+    text = "✅ <b>Download Complete!</b>\n\n"
+    text += "📂 <b>List File:</b>\n"
+    for i in items:
+        short_name = smart_truncate_filename(i["filename"])
+        text += f"» {short_name}\n"
+
+    text += (
+        f"\n╭📂 <b>Total File »</b> {total_files}\n"
+        f"├📁 <b>Total Size »</b> {naturalsize(total_size)}\n"
+        f"├⏱️ <b>Saved Time »</b> {format_duration(total_time)}\n"
         f"╰💾 <b>Saved To »</b> {output_dir}"
     )
+    return text
 
 def get_unique_filename(directory: str, message: Message) -> str:
     """
