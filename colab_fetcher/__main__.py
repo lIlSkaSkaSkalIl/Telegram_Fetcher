@@ -17,11 +17,47 @@ from colab_fetcher import load_credentials
 from colab_fetcher.utils.client import app
 from colab_fetcher.utils.logging import logger
 
+# ==========================
+# 📌 GLOBAL VARIABLE
+# ==========================
+
 completed_downloads = {}
 active_downloads = {}
+
 # Lock global untuk state management
 state_lock = asyncio.Lock()
 download_queue = asyncio.Queue()
+
+# Tambahkan dictionary untuk menampung file sementara per user
+batch_buffer = {}
+batch_tasks = {}
+BATCH_DELAY = 2  # detik
+
+# State File
+STATE_FILE = Path(__file__).resolve().parent.parent / "config/user_state.json"
+STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+# Dictionary ekstensi file
+EXTENSIONS = {
+    # Video
+    ".mp4": "video", ".avi": "video", ".mkv": "video", ".m2ts": "video",
+    ".mov": "video", ".ts": "video", ".webm": "video", ".mpg": "video",
+    # Audio
+    ".mp3": "audio", ".wav": "audio", ".flac": "audio", ".aac": "audio",
+    # Gambar
+    ".jpg": "photo", ".jpeg": "photo", ".png": "photo", ".bmp": "photo",
+    # Dokumen
+    ".pdf": "pdf", ".doc": "document", ".docx": "document",
+    # Archive
+    ".zip": "archive", ".rar": "archive", ".7z": "archive",
+    # Subtitle
+    ".srt": "subtitle", ".ass": "subtitle"
+}
+
+
+# ==========================
+# 📌 HANDLER FUNCTIONS
+# ==========================
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message: Message):
@@ -75,11 +111,6 @@ async def tgupload_command(client, message: Message):
     except Exception as e:
         logger.exception("Error in /tgupload handler")
         await send_error(message, "processing_error", str(e))
-
-# Tambahkan dictionary untuk menampung file sementara per user
-batch_buffer = {}
-batch_tasks = {}
-BATCH_DELAY = 2  # detik
 
 @app.on_message(filters.document | filters.video | filters.audio | filters.photo)
 async def handle_file_upload(client, message: Message):
@@ -206,6 +237,10 @@ async def cancel_all_command(client, message: Message):
             parse_mode=ParseMode.HTML
         )
 
+# ==========================
+# 📌 WORKER & TASK FUNCTIONS
+# ==========================
+
 async def queue_worker():
     while True:
         client, message, file_path, output_dir = await download_queue.get()
@@ -283,15 +318,6 @@ async def send_batch_message(client, chat_id, user_id):
     # Cleanup
     batch_buffer.pop(user_id, None)
     batch_tasks.pop(user_id, None)
-
-def format_duration(seconds: float) -> str:
-    minutes = int(seconds) // 60
-    secs = int(seconds) % 60
-    parts = []
-    if minutes > 0:
-        parts.append(f"{minutes}m")
-    parts.append(f"{secs}s")
-    return " ".join(parts)
 
 async def download_with_progress(client, message: Message, file_path: str, output_dir: str):
     start_time = time.time()
@@ -415,6 +441,19 @@ async def download_with_progress(client, message: Message, file_path: str, outpu
     finally:
         active_downloads.pop(message.id, None)
 
+# ==========================
+# 📌 HELPER FUNCTIONS
+# ==========================
+
+def format_duration(seconds: float) -> str:
+    minutes = int(seconds) // 60
+    secs = int(seconds) % 60
+    parts = []
+    if minutes > 0:
+        parts.append(f"{minutes}m")
+    parts.append(f"{secs}s")
+    return " ".join(parts)
+    
 def smart_truncate_filename(filename: str, max_length: int = 20) -> str:
     name, ext = os.path.splitext(filename)
 
@@ -585,23 +624,6 @@ async def send_error(message: Message, error_type: str, detail: str = None):
         msg += f"\n\n🔍 <b>Detail:</b> <code>{detail}</code>"
     await message.reply_text(msg, parse_mode=ParseMode.HTML)
 
-# Dictionary ekstensi file
-EXTENSIONS = {
-    # Video
-    ".mp4": "video", ".avi": "video", ".mkv": "video", ".m2ts": "video",
-    ".mov": "video", ".ts": "video", ".webm": "video", ".mpg": "video",
-    # Audio
-    ".mp3": "audio", ".wav": "audio", ".flac": "audio", ".aac": "audio",
-    # Gambar
-    ".jpg": "photo", ".jpeg": "photo", ".png": "photo", ".bmp": "photo",
-    # Dokumen
-    ".pdf": "pdf", ".doc": "document", ".docx": "document",
-    # Archive
-    ".zip": "archive", ".rar": "archive", ".7z": "archive",
-    # Subtitle
-    ".srt": "subtitle", ".ass": "subtitle"
-}
-
 def get_file_type(file_path: str) -> str:
     """Mendapatkan tipe file berdasarkan ekstensi"""
     _, ext = os.path.splitext(file_path)
@@ -630,8 +652,9 @@ def get_output_directory() -> str:
 
     return download_path
 
-STATE_FILE = Path(__file__).resolve().parent.parent / "config/user_state.json"
-STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+# ==========================
+# 📌 USER STATE MANAGEMENT
+# ==========================
 
 async def load_user_state():
     async with state_lock:
@@ -660,6 +683,9 @@ async def clear_user_state(user_id):
         del state_dict[str(user_id)]
         await save_user_state(state_dict)
 
+# ==========================
+# 📌 MAIN ENTRY POINT
+# ==========================
 
 if __name__ == "__main__":
     logger.info("Starting the bot...")
