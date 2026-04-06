@@ -521,7 +521,7 @@ def get_progress_text(filename, current, total, speed, elapsed, eta, output_dir)
     percent = current / total * 100
     filled = int(10 * percent / 100)
     bar = '▰' * filled + '▱' * (10 - filled)
-    short_name = smart_truncate_filename(i["filename"])
+    short_name = smart_truncate_filename(filename)
                         
     return (
         f"<b>📥 Downloading...</b>\n\n"
