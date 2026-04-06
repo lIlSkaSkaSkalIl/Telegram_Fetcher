@@ -472,7 +472,7 @@ def smart_truncate_filename(filename: str, max_length: int = 20) -> str:
     # Jika nama terlalu panjang, potong depan + belakang
     if len(name) > max_length:
         truncated = f"{name[:10]}...{name[-5:]}"
-        return f"{truncated}{ext}
+        return f"{truncated}{ext}"
 
     # Default: tampilkan nama + ekstensi
     return f"{name}{ext}"
