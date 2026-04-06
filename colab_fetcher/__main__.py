@@ -459,17 +459,20 @@ def smart_truncate_filename(filename: str, max_length: int = 20) -> str:
 
     separators = ['.', '_', '-', ' ']
 
-    # Jika ada separator, ambil 2 bagian awal agar lebih informatif
+    # Jika ada separator, ambil 2 bagian awal + bagian terakhir
     for sep in separators:
         parts = name.split(sep)
-        if len(parts) >= 2:
-            truncated = f"{parts[0]}_{parts[1]}..."
+        if len(parts) >= 3:
+            truncated = f"{parts[0]}_{parts[1]}...{parts[-1]}"
+            return f"{truncated}{ext}"
+        elif len(parts) >= 2:
+            truncated = f"{parts[0]}_{parts[1]}...{ext}"
             return f"{truncated}{ext}"
 
     # Jika nama terlalu panjang, potong depan + belakang
     if len(name) > max_length:
         truncated = f"{name[:10]}...{name[-5:]}"
-        return f"{truncated}{ext}"
+        return f"{truncated}{ext}
 
     # Default: tampilkan nama + ekstensi
     return f"{name}{ext}"
