@@ -2,6 +2,7 @@ import os
 import time
 import asyncio
 import json
+import mimetypes
 
 from tqdm import tqdm
 from datetime import datetime 
@@ -112,7 +113,10 @@ async def tgupload_command(client, message: Message):
         logger.exception("Error in /tgupload handler")
         await send_error(message, "processing_error", str(e))
 
-@app.on_message(filters.document | filters.video | filters.audio | filters.photo)
+@app.on_message(filters.private & (
+    filters.document | filters.video | filters.audio |
+    filters.photo | filters.voice | filters.sticker | filters.animation
+))
 async def handle_file_upload(client, message: Message):
     try:
         user_id = message.from_user.id
@@ -455,49 +459,63 @@ def format_duration(seconds: float) -> str:
     return " ".join(parts)
     
 def smart_truncate_filename(filename: str, max_length: int = 20) -> str:
-    name, ext = os.path.splitext(filename)
+    """Jika nama file terlalu panjang, langsung potong stringnya saja tanpa peduli ekstensi,
 
-    separators = ['.', '_', '-', ' ']
-
-    # Jika ada separator, ambil 2 bagian awal + bagian terakhir
-    for sep in separators:
-        parts = name.split(sep)
-        if len(parts) >= 3:
-            truncated = f"{parts[0]}_{parts[1]}...{parts[-1]}"
-            return f"{truncated}{ext}"
-        elif len(parts) >= 2:
-            truncated = f"{parts[0]}_{parts[1]}...{ext}"
-            return f"{truncated}{ext}"
-
-    # Jika nama terlalu panjang, potong depan + belakang
-    if len(name) > max_length:
-        truncated = f"{name[:10]}...{name[-5:]}"
-        return f"{truncated}{ext}"
-
-    # Default: tampilkan nama + ekstensi
-    return f"{name}{ext}"
+    aman dari segala jenis crash akibat format nama file.
+    """
+    if len(filename) > max_length:
+        return f"{filename[:max_length]}..."
+    return filename
 
 def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove unsupported characters."""
     return "".join(c for c in name if c.isalnum() or c in (' ', '.', '_')).rstrip()
 
 def get_file_extension(message: Message) -> str:
-    """Mendapatkan ekstensi file dari message"""
+    """Mendapatkan ekstensi file dari nama file atau MIME metadata Telegram."""
+    # Document
     if message.document:
-        ext = os.path.splitext(message.document.file_name or "")[1]
-    elif message.video:
-        ext = os.path.splitext(message.video.file_name or "")[1] or ".mp4"
-    elif message.audio:
-        ext = os.path.splitext(message.audio.file_name or "")[1] or ".mp3"
-    elif message.photo:
-        ext = ".jpg"
-    elif message.voice:
-        ext = ".ogg"
-    elif message.sticker:
-        ext = ".webp"
-    else:
-        ext = ".bin"
-    return ext.lower()
+        if message.document.file_name:
+            ext = os.path.splitext(message.document.file_name)[1]
+        else:
+            ext = ext_from_mime(message.document.mime_type, ".bin")
+        return ext.lower()
+
+    # Video
+    if message.video:
+        if message.video.file_name:
+            ext = os.path.splitext(message.video.file_name)[1]
+        else:
+            ext = ext_from_mime(message.video.mime_type, ".mp4")
+        return ext.lower()
+
+    # Audio
+    if message.audio:
+        if message.audio.file_name:
+            ext = os.path.splitext(message.audio.file_name)[1]
+        else:
+            ext = ext_from_mime(message.audio.mime_type, ".mp3")
+        return ext.lower()
+
+    # Photo / voice / sticker / fallback
+    if message.photo:
+        return ".jpg"
+    if message.voice:
+        return ".ogg"
+    if message.sticker:
+        return ".webp"
+
+    return ".bin"
+
+def ext_from_mime(mime_type: str, default: str = ".bin") -> str:
+    """Ambil ekstensi dari MIME type Telegram."""
+    if not mime_type:
+        return default
+
+    ext = mimetypes.guess_extension(mime_type.lower())
+    if ext == ".jpe":
+        return ".jpg"
+    return ext or default
 
 def get_start_message() -> str:
     return (
@@ -557,40 +575,41 @@ def download_summary_message(user_id: int, output_dir: str) -> str:
 
 def get_unique_filename(directory: str, message: Message) -> str:
     """
-    Generate unique filename dengan:
-    1. Filename asli (jika ada) + ekstensi
-    2. Caption (50 char) + ekstensi (jika tidak ada filename)
-    3. Timestamp + ekstensi (fallback)
+    Generate unique filename dari:
+    1. Nama file asli Telegram jika ada
+    2. Caption jika file_name tidak ada
+    3. Timestamp sebagai fallback
+    Ekstensi diambil dari file_name atau MIME metadata Telegram.
     """
     os.makedirs(directory, exist_ok=True)
     ext = get_file_extension(message)
-    
-    # Case 1: Filename asli
-    if (message.document and message.document.file_name) or \
-       (message.video and message.video.file_name) or \
-       (message.audio and message.audio.file_name):
-        filename = message.document.file_name if message.document else \
-                  message.video.file_name if message.video else \
-                  message.audio.file_name
-        base = sanitize_filename(os.path.splitext(filename)[0])
+
+    # Ambil filename asli kalau ada
+    original_filename = None
+    if message.document and message.document.file_name:
+        original_filename = message.document.file_name
+    elif message.video and message.video.file_name:
+        original_filename = message.video.file_name
+    elif message.audio and message.audio.file_name:
+        original_filename = message.audio.file_name
+
+    if original_filename:
+        base = sanitize_filename(os.path.splitext(original_filename)[0])
         final_name = f"{base}{ext}"
-    
-    # Case 2: Caption
     elif message.caption:
-        final_name = f"{sanitize_filename(message.caption)[:50]}{ext}"
-    
-    # Case 3: Timestamp
+        base = sanitize_filename(message.caption)[:50]
+        final_name = f"{base}{ext}"
     else:
         final_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
-    
-    # Handle duplikat
+
+    # Handle duplikat nama
     counter = 1
     original_name = final_name
     while os.path.exists(os.path.join(directory, final_name)):
         name_part, ext_part = os.path.splitext(original_name)
         final_name = f"{name_part}_{counter}{ext_part}"
         counter += 1
-    
+
     return final_name
 
 async def send_error(message: Message, error_type: str, detail: str = None):
@@ -634,8 +653,7 @@ def get_file_type(file_path: str) -> str:
     return EXTENSIONS.get(ext.lower(), "other")
 
 def is_allowed_file(message: Message) -> bool:
-    ext = get_file_extension(message)
-    return ext in EXTENSIONS
+    return True
     
 def get_output_directory() -> str:
     # Baca konfigurasi dari credentials.json
